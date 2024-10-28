@@ -1,0 +1,12 @@
+List of things you want to put in the config files. 
+This can probably be multiple files. 
+
+
+Existence of directories:
+    Data -> Input 
+    Preprocessing
+    ML
+    etc.
+
+Existence of DataGather.py in home dir
+
