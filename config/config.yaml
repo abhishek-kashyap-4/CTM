@@ -1,0 +1,140 @@
+
+
+
+
+
+---
+
+# GDD
+GDD: True
+
+GLOBALNAME_INPUT: 'Beta002'
+GLOBALNAME_OUTPUT: 'Beta002'
+
+# DEFAULTS
+DEFAULTS:
+    
+    Tolerance_options: ['SEVERE' , 'AVOID' , 'DEBUG' ] 
+    Tolerance: 'SEVERE'
+    
+    loop_options: 
+        on_error_options: ['quit','ignore']
+        on_error : 'quit'
+        
+    printing_options: ['default','multiple']
+    printing : ['default']
+    
+    # With run  - saved_redo, search for a saved file. If doesn't exist, compute it.
+    run_options : ['saved','redo' , 'saved_redo' , 'redo_saved' , 'manual']
+    run : 'redo'
+    
+    after_run_options: ['save','pass']
+    after_run: 'save'
+        
+        
+# RUN  - use for manual run_options
+RUN: 
+    Execute: 
+        ExecuteOptions: "{ -1/False : don't execute , 1: Execute, don't save file , 2/True: Execute, save file"
+        ParallelTexttoCSV: -1
+        TemperatureGather: False 
+        GenerateCentroidTemperatures: False 
+        GetGlobalSowDates: False 
+        GenerateCentroidTemperaturesCGDD: False 
+        
+        SowDateEstimate: 1
+        HarmonisedTimeComposite: 1 
+        FeatureAddition: 1
+        FeatureSelection: 2
+        EDA: 1
+        ML: 2
+        
+        
+    Options:
+        
+        
+        
+    
+
+
+##################################################################################
+# FUNCTIONS 
+
+FUNCTIONS: 
+    CloudCorrection: 
+        params: 
+            reg : '[0-9]{8}_'
+            feature_pattern: 'CLDPRB'
+            method: 'Mask'
+        method_options: ['Mask','CloudFill']
+        
+        
+    GenerateCentroidTemperatures:
+        seperate_window : True
+        columns_to_copy_old : ['.geo','Crop_Type','Sow_Date','Field_Id','Harv_Date']
+        columns_to_copy : ['.geo','Crop_Type','Sow_Date','Unique_Id','Harv_Date']
+    
+    GenerateCentroidTemperaturesCGDD:
+        params: 
+            increment : 25
+            method : 'fixed' 
+            startdate : '2023-01-01'
+        seperate_window : True
+        all_methods : ['dynamic' , 'fixed']
+        
+    HarmonisedGDDComposite:
+        params:
+            interpol_method: 'closest'
+            increment: 50
+            extreme: 10
+            maxcgdd: 5000
+            verbose: True
+            date_method: 'fixed'
+        interpol_methods: ['lookbehind' , 'lookahead' , 'closest' , 'reduce_mean_n' , 'reduce_median_n' ,  'reduce_mean_extreme' , 'reduce_median_extreme'  , 'reduce_mean_extreme_left' ,'reduce_mean_extreme_right'] 
+        
+    HarmonisedTimeComposite:
+        params:
+            fixed: False 
+            fixed_date: '20230101'
+            increment: 10
+    Preprocess:
+        params:
+            impose_date: True
+            method_nulls: 'remcol'
+            #subset: None
+            method_remap: 'Lazy'
+            targetname: 'Crop_Type' 
+            #mapper: {}
+        method_nulls_options: ['remrow','remcol']
+        method_remap_options: ['Lazy' , 'Drop' , 'Ignore' , 'Raise' ]
+            
+    
+    FeatureAddition:
+        params:
+            time_indexes: 'all'
+            comb: True
+            tim: False 
+            STN: False 
+            tim_method: 'Full' 
+            STN_w: 3
+    FeatureSelection:
+        params: 
+            by: 'covar'
+            correlation_threshold: 0.7
+            cutoff: 15
+            verbose: True
+    Models:
+        params:
+            target: -1
+            model: 'RF'
+            tune: 'True'
+            cv: 'False'
+        models_avail : ['RF001'] # This isn't implemented yet.
+     
+#####################################################################################
+
+
+PostAnalysis:
+    Incorrect: 'Save' # Save the harmonized, Satellite, and temperature data. Basically, everything. Divide by train/test (or add the column)
+    ErrorClustering: True
+    

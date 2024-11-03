@@ -1,0 +1,3 @@
+Come up with a cloudfill algorithm based on time series based KNN.
+
+use as input for KNN, a version of the data that is time axis, monthly mosaicked.
