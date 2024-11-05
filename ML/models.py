@@ -183,12 +183,7 @@ def get_SVM(df,y,tune=False,cv=False , size = 0.3 , learning_curve = False , ver
 
 
 
-def pipeline_executable(first_arg,target = -1 , model = 'RF' , tune = 'True' , cv = 'False'):
-    
-    if(not isinstance(target , (pd.Series,list,np.ndarray, np.generic))):
-        raise Exception("Target column not prodived (correctly)")
-    df = first_arg
-    
+def model_wrapper(df,target,model = 'RF',tune='True',cv=False):
     if(model == 'RF'):
         
         model , accuracy , report = get_rf(df,target,tune = False , cv = False , size = 0.3,learning_curve=False,verbose=False) 
@@ -209,6 +204,34 @@ def pipeline_executable(first_arg,target = -1 , model = 'RF' , tune = 'True' , c
         raise Exception(f'Model {model} not recognized')
         
     return model ,accuracy , report
+
+
+
+
+def pipeline_executable(first_arg,target = -1 , models = ['RF'] , tune = True , cv = False):
+    if(not isinstance(target , (pd.Series,list,np.ndarray, np.generic))):
+        raise Exception("Target column not prodived (correctly)")
+    df = first_arg
+    
+    assert len(models)>0, "provide atleast 1 model option. Chose from list in config."
+    d = {}
+    best_accuracy = 0
+    best_model = ''
+    for modelname in models:
+        model , accuracy , report = model_wrapper(df , target , model= modelname , tune = tune ,cv = cv)
+        d[modelname] = (model , accuracy , report)
+        if(accuracy > best_accuracy):
+            best_accuracy = accuracy 
+            best_model = modelname 
+    print(f"Best accuracy is {best_accuracy} with {best_model}")
+    return d
+
+        
+        
+    
+    
+
+
     
 
 if __name__ == '__main__':

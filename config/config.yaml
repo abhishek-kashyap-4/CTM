@@ -6,7 +6,7 @@
 ---
 
 # GDD
-GDD: True
+GDD: False
 
 GLOBALNAME_INPUT: 'Beta002'
 GLOBALNAME_OUTPUT: 'Beta002'
@@ -96,7 +96,7 @@ FUNCTIONS:
         params:
             fixed: False 
             fixed_date: '20230101'
-            increment: 10
+            increment: 20
     Preprocess:
         params:
             impose_date: True
@@ -126,10 +126,10 @@ FUNCTIONS:
     Models:
         params:
             target: -1
-            model: 'RF'
-            tune: 'True'
-            cv: 'False'
-        models_avail : ['RF001'] # This isn't implemented yet.
+            models: ['RF']
+            tune: True
+            cv: False
+        models_avail : ['RF','SVM','XGB'] # This isn't implemented yet.
      
 #####################################################################################
 

@@ -125,7 +125,7 @@ def execute(config):
     # 2.1 CGDD 
     if(config['GDD']):
         
-        import GenerateCentroidTemperaturesCGDD as gcc 
+        import compositing.GenerateCentroidTemperaturesCGDD as gcc 
         item  = ('GenerateCentroidTemperaturesCGDD' , gcc)
         params =  config['FUNCTIONS']['GenerateCentroidTemperaturesCGDD']['params']
         centroids  = pd.read_csv('Data/Interim/post/temperature_V5_2023_centroids.csv')
@@ -140,7 +140,7 @@ def execute(config):
                     #####               #######             ######
         
         
-        import HarmonisedGDDComposite as HGC 
+        import compositing.HarmonisedGDDComposite as HGC 
         item = ('HarmonisedGDDComposite',HGC)
         params = config['FUNCTIONS']['HarmonisedGDDComposite']['params']
         params['hm'] = hm.copy()
@@ -156,7 +156,7 @@ def execute(config):
             
     # 2.2 Harmonised Time Composite
     elif(not config['GDD']):
-        import Harmonised_Time_Composite as htm 
+        import compositing.Harmonised_Time_Composite as htm 
         item  = ('HarmonisedTimeComposite',htm)
         params = config['FUNCTIONS']['HarmonisedTimeComposite']['params'] 
         params['bands'] = GlobalVars.optical_bands 
@@ -171,13 +171,10 @@ def execute(config):
                                            input_file = optical.copy(),
                                            params = params , 
                                           save_path = save_path) 
-        
-    utils.null_positions(composited,rvc=True)
-    print(utils.null_positions(composited))
-    1/0
+    
     # 3. PreML
     ## 3.1 Preprocessing 
-    import preprocessing.Preprocess as pp
+    import preprocessing.Preprocess as pp 
     item = ('Preprocess',pp)
     params = config['FUNCTIONS']['Preprocess']['params'] 
     preprocessed = execute_pipeline_item(item,config,
@@ -230,9 +227,10 @@ def execute(config):
     params['target'] =  target_numeric 
     
     #feature_added = feature_added.drop(columns = [GlobalVars.target])
-    model,accuracy,report = execute_pipeline_item(item,config,
+    models = execute_pipeline_item(item,config,
                                          input_file = feature_added.copy() ,
                                          params = params ,)
+    model,accuracy,report  = models[0]
     
     
 

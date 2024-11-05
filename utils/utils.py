@@ -113,6 +113,14 @@ def get_timesteps_bands(df , reg = -1 , check = False):
             assert bands_counter[band] == tu , "Some bands seem to be missing all timesteps."
     
     return timesteps_unique, bands_unique 
+def get_timesteps_bands_columns(timesteps,bands):
+    cols = []
+    for band in bands:
+        for time in timesteps:
+            cols.append(str(time)+'__'+band)
+    return cols
+            
+        
 
 def get_timesteps(df,reg = -1,check = False):
     '''
@@ -144,7 +152,9 @@ def get_timesteps(df,reg = -1,check = False):
 
 def sample_df(df,frac = 0.3):
     return df.sample(frac=frac) 
-def filter_df_nulls(df , method = 'remcol',subset=None, perc = 100):
+
+#default 30 percentage.
+def filter_df_nulls(df , method = 'remcol',subset=None, perc = 30):
     if(method == 'remrow'):
         if subset is not None:
             df_filtered = df.dropna(subset=subset)

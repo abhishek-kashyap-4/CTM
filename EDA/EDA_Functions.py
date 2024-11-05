@@ -158,9 +158,9 @@ def merge_time(df,timesteps = []):
 ## this 4th dim can be croptype , Sowdate existance , Location, etc. It is alway categorical. 
 ## 4th dim categorical can be hue for any scatterplot.
 
-# 1. Single Aggregations
+### 1. Single Aggregations
 
-## 1.1 Same time, Same bands, Multiple points
+#### 1.1 Same time, Same bands, Multiple points
 #### Describe column, Value counts. Look for meaningful time-band pairs.
 #### Scatter plot, Variance of the column. wrt target, see correlation with target. 
 #### Histogram of a band , skewness of columns. 
@@ -183,20 +183,20 @@ def skew_division(df,cols):
 
 
 
-## 1.2 Same time, Multiple bands, 1 point 
+#### 1.2 Same time, Multiple bands, 1 point 
 #### Sample bar chart of a point's signature. 
  
 
 
 
-## 1.3 Multiple time , Same band , 1 point
+#### 1.3 Multiple time , Same band , 1 point
 ####  Sample timeseries of a point. 
 
 
 
-# 2. Double Aggregations
+#### 2. Double Aggregations
 
-## 2.1 One time , Multiple Bands , Multiple points 
+#### 2.1 One time , Multiple Bands , Multiple points 
 ####  Bar chart with variances of each band. 
 #### (Future) With max, min, mean etc of each band, bar chart.
 #### Boxplot of a timestep (A timestep's signature.)
@@ -219,7 +219,7 @@ def get_col_variances(data,threshold=0):
     return retval
 
 
-## 2.2 Multiple times , Same band , Multiple Points 
+#### 2.2 Multiple times , Same band , Multiple Points 
 ####  Time series with mean, variance (or) median , variance. 
 #### Box plot of a band (A band's signature)
     
@@ -293,10 +293,13 @@ def band_series_by_croptype(df,band,crops = []):
   plt.legend(loc='upper left')
 
 
-## 2.3 Multiple times , Multiple bands , Same point. 
+#### 2.3 Multiple times , Multiple bands , Same point. 
 #### Time series signature of a point. 
 
 
+#### 3. All 
+#### Might be useful sometimes. 
+#### Checking nulls of all timesteps, aggregated over all bands and data points
 
 #+++++++++++++++++++++++++  Others    ++++++++++++++++++++++++++++++++++#                    
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -313,6 +316,10 @@ def value_counts(df , col = 'Crop_Type',method = 'cat'):
     else:
         1/0
 
-
-
-
+# USECASES ( with - aggregation index)
+#### 1.(Agg 1.3 )The time drift of GDD of a specific acculuation wrt to time composite (of a specific composite)  - And how this changes for croptype
+#### 2.(Agg 2.2 boxplot) Time shift of the same band of all data points
+#### 3. <DONE> Check if any band is completely null
+#### 4. (2.1 , 3) Check cloudiness / nulls  range of every timestep. 
+#### 4.1Check if any cloud is completely null or not null.
+#### 

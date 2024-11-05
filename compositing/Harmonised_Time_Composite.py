@@ -64,7 +64,7 @@ if __name__ == '__main__':
         BANDS = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B8A', 'B9', 'B11', 'B12','CLDPRB']
 
     elif(which=='sar'):
-        all_df  =  pd.read_csv('Data\\input\\Satellite\\all_sar_restructured_cleaned.csv').drop(columns = ['Unnamed: 0'])
+        all_df  =  pd.read_csv('Data\\Input\\Satellite\\all_sar_restructured_cleaned.csv').drop(columns = ['Unnamed: 0'])
         BANDS = ["VV","VH","VV_VH"]
     
     fixed = False 
@@ -73,9 +73,9 @@ if __name__ == '__main__':
     df = pipeline_executable(all_df,BANDS,fixed = fixed , fixed_date = fixed_date,increment = increment)
     
     if(fixed):
-        df.to_csv('Data\\interim\\Satellite\\all_'+which+f'_{increment}day_fixedJan1.csv')
+        df.to_csv('Data\\Interim\\Satellite\\all_'+which+f'_{increment}day_fixedJan1.csv')
     else:
-        df.to_csv('Data\\interim\\Satellite\\all_'+which+f'_{increment}day.csv')
+        df.to_csv('Data\\Interim\\Satellite\\all_'+which+f'_{increment}day.csv')
         
         
         

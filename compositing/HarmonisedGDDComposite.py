@@ -48,7 +48,8 @@ import seaborn as sns
 import re
 import matplotlib.pyplot as plt
 
-from utils.utils import get_timesteps_bands , fix_column_syntax , null_positions, filter_df_nulls
+
+from utils import utils
 # %%
 ####################################FUCNTIONS###################################################
 "##### Level 1 functions ##"
@@ -224,7 +225,7 @@ def gdd_interpol(all_df, hm , cgdd,bands ,interpol_method = 'closest',increment 
         }
     
     #The check here is important for the script.
-    timesteps , COLUMNS = get_timesteps_bands(all_df , reg = '[0-9]{8}__', check = True)
+    timesteps , COLUMNS = utils.get_timesteps_bands(all_df , reg = '[0-9]{8}__', check = True)
     
     assert set(COLUMNS) ==set(bands)
     
@@ -295,7 +296,7 @@ def pipeline_executable(first_arg,hm = [] , cgdd = [],bands = [],interpol_method
     cgdd.columns = cgdd.columns.astype(str)
     
     # Check the output here. For now, it needs to say, "Double underscore already found."
-    df  = fix_column_syntax( df, from_re=r'[0-9]{8}_',impose_date = True)
+    df  = utils.fix_column_syntax( df, from_re=r'[0-9]{8}_',impose_date = True)
     df = df.drop(columns = [col for col in df.columns if 'Unnamed' in col])
         
     cgdd_df = gdd_interpol(df, hm , cgdd,bands ,interpol_method = interpol_method,increment = increment,extreme = extreme,  maxcgdd = maxcgdd, date_method = date_method , verbose =verbose)
@@ -325,17 +326,10 @@ if __name__ == '__main__':
     'verbose' :True  , 
     'interpol_method' : 'closest' , 
     'increment' : 50 ,
-    'extreme' : 10 ,  #15 - 502879  , 10 502944
+    'extreme' : 10 ,  # nulls 15 - 502879  , 10 502944  
     'maxcgdd' : 5000 ,}
     
-    print(len(null_positions(all_optical)))
     all_optical_interpoled = pipeline_executable(all_optical, hm , cgdd,bands = BANDS , **params)
-    print(len(null_positions(all_optical_interpoled)))
-    all_optical_interpoled = filter_df_nulls(all_optical_interpoled,perc = 70)
-    print(len(null_positions(all_optical_interpoled)))
-    
-    
-    #use percentage 30
     all_optical_interpoled.to_csv('Data\Interim\cgdd\cgdd.csv')
     
     
