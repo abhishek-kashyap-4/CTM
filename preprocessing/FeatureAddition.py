@@ -9,7 +9,7 @@ import re
 import warnings
 
 
-from utils.utils import get_timesteps_bands , fix_column_syntax ,filter_df_nulls,null_positions
+from utils.utils import get_timesteps_bands , check_column_syntax 
 
 def feature_addition(df, time_indexes = [], comb=True , tim = False , STN = False, tim_method = 'Full', STN_w = 3):
     '''
@@ -27,7 +27,6 @@ def feature_addition(df, time_indexes = [], comb=True , tim = False , STN = Fals
         -> This means regex is always [0-9]+__ 
     '''
       
-    warnings.warn("This method isn't ready for GDD scaled yet, Except basic indexes. (using ft,tt - 0 9 )",UserWarning)
     indices = []
     timesteps,indices = get_timesteps_bands(df,check=True)
 
@@ -144,8 +143,7 @@ def feature_addition(df, time_indexes = [], comb=True , tim = False , STN = Fals
       
       
         if(time_indexes == 'all'):
-          for key in d:
-            df[key] = d[key]
+          df = pd.concat([df, pd.DataFrame(d)], axis=1)
         else:
           for key in time_indexes:
             if(key in d.keys()):
@@ -170,23 +168,26 @@ def feature_addition(df, time_indexes = [], comb=True , tim = False , STN = Fals
       d.update(sd)
       
       # A_K_ adding this. 
-      for key in d:
-          df[key] = d[key]
+      df = pd.concat([df, pd.DataFrame(d)], axis=1)
+      #for key in d:
+       #   df[key] = d[key]
           
       
 
-  
     if(df.isnull().values.any()):
         warnings.warn("DataFrame contains null values. Could be the creation of indices.",UserWarning)
-        print('Dropping rows...')
-        df1 = filter_df_nulls(df , method = 'remrow')
-        print(f"Percentage dataframe removed: {(len(df) - len(df1))/len(df)}")
-        df = df1
-        
+
         
     return df
   
-  
+def additional(df):
+    '''
+    Use this script to add additional columns. 
+    1. Geography - Ag zone. 
+    
+    '''
+    # A_K_ come back to this. 
+    
 def pipeline_executable(first_arg , time_indexes = 'all', comb=True , tim = False , STN = False, tim_method = 'Full', STN_w = 3):
     df = first_arg
     
@@ -197,17 +198,15 @@ def pipeline_executable(first_arg , time_indexes = 'all', comb=True , tim = Fals
 
 if __name__ == '__main__':
     
-    df = pd.read_csv('Data/interim/satellite/all_optical_10day_fixedJan1.csv')
-    df  = fix_column_syntax(df , from_re=r'[0-9]{1,2}_',impose_date = False)
+    df = pd.read_csv('Data/Interim/Preprocessed/FieldOptical_CGDD.csv')
+    check_column_syntax(df , kind = 'timestep')
     
     warnings.warn("Unique_Id has null values. I think its from sjoin in EnRtext_to_csv2. you've to correct that.",UserWarning)
-    df = filter_df_nulls(df,subset = ['Unique_Id'])
-    
-    if(df.isnull().values.any()):
-        1/0
+    df = df.dropna(subset = ['Unique_Id'])
+
     
     addeddf = pipeline_executable(df)
-    addeddf.to_csv('Data/interim/satellite/all_optical_10day_fixedJan1_featuredAdded.csv')
+    addeddf.to_csv('Data/Interim/Added/FieldOptical_CGDD.csv')
     
     
 

@@ -51,6 +51,7 @@ def safe_load(fname,ftype='csv'):
         raise NotImplementedError
     try:
         df = pd.read_csv(fname)
+        df = df.drop(columns = [col for col in df.columns if 'Unnamed' in col])
     except Exception as e:
         return False , None 
     return True , df
@@ -59,15 +60,57 @@ def safe_load(fname,ftype='csv'):
 ###################################################################################################### 
 ###################################################################################################### 
 ######################################################### Data related
+def check_column_syntax(df, kind = 'generic' , reg = r'[0-9]+__',stricter = False):
+    '''
+    1. If kind is timestep:
+        1.1 Columns with regex [0-9]{1,2}__ must be > 0 
+        1.2 If stricter, they should be = timesteps * bands. 
+        1.3 No other column starting with a digit should be present. 
+    2. If Kind is date:
+        2.1 Columns with refex [0-9]{8}__ must be >0
+        2.2 If stricter, they should be = timesteps * bands 
+        2.3 No other column starting with a digit should be present. 
+    
+    3. If kind is custom: 
+         3.1 Columns with given regex must be >0 
+         3.2 likewise 
+         3.3 Likewise 
+    4 If kind is genetic, regex is [0-9]+__
+    '''
+    if(kind == 'timestep'):
+        regex = r'[0-9]{1,2}__' 
+    elif(kind == 'date'):
+        regex = r'[0-9]{8}__'
+    elif(kind == 'custom'):
+        regex = reg
+    elif(kind == 'generic'):
+         regex = r'[0-9]+__'
+    else:
+        raise Exception(f"Kind {kind} not recognized. Use among 'timestep' , 'date' ,'custom' ,'generic' ")
+    
+    cols = [col for col in df.columns if re.match(regex,col)]
+    assert len(cols) >0 , "No columns matching the assumed regex."
+    
+    if(stricter):
+        timesteps , bands = get_timesteps_bands(df,reg = regex)
+        assert len(cols) == len(timesteps) * len(bands), "Strict column syntax check failed. (Tip- look at extra added features) "
+        
+    notcols = [col for col in df.columns if col not in cols]
+    assert sum(1 for col in notcols if re.match(r'[0-9]',col)) ==0 , "Columns with Digit starting found that didn't match regex."
 
 # A_K_ implement just_check.
 def fix_column_syntax(df , from_re=r'[0-9]{8}_',impose_date = True,just_check = False):
     '''For now, just adding underscore to make it a doubleunderscore'''
     
-    if sum(1 for col in df.columns if '__' in col)>0 :
-        print('Double underscore already found in columns. Change your code. ')
+    if(just_check):
+        if(impose_date):
+            check_column_syntax(df,kind = 'date')
+        else:
+            check_column_syntax(df,kind = 'custom',reg=from_re)
         return df 
     
+    assert sum(1 for col in df.columns if '__' in col) ==0 , "Double underscore already found in columns. Change your code. (if you just want to check syntax, call check_column_syntax"
+
     if(impose_date):
         cols = [col for col in df.columns if re.match(r'[0-9]', col) ]
         checked = [col for col in cols if re.match(r'[0-9]{8}',col)]
@@ -86,9 +129,13 @@ def fix_column_syntax(df , from_re=r'[0-9]{8}_',impose_date = True,just_check = 
             
             
 def get_timesteps_bands(df , reg = -1 , check = False):
+    
+    #A_K_
+    " ERROR - TIMESTEPS WERENT SORTED PROPERLY.CHANGED IT NOW."
     '''
-    1. Get timesteps and unique bands (only those with timesteps) that the dataframe has. 
+    1. Get timesteps(sorted) and unique bands (only those with timesteps) that the dataframe has. 
     2. Check that all these bands have all timesteps. (Columns should either have all, or none of the timesteps)
+     - timesteps HAVE to be sorted properly. (str sorts 11 before 2)
     '''
     if(reg==-1):
         warnings.warn("Regex wasn't set. Setting this to '[0-9]+__'. Note, this is not imposing YYYYMMDD and you should really send the regex you want. ",UserWarning)
@@ -99,8 +146,8 @@ def get_timesteps_bands(df , reg = -1 , check = False):
     # int() typecast works because we are using YYYYMMDD and not DDMMYYYY, and there's no leading zeroes.
     # It also works for redone timesteps. 
     timesteps , bands = zip(*[col.split('__') for col in df.columns if re.match(reg,col)])
-    timesteps_unique , bands_unique = list(sorted(set(timesteps))) , list(set(bands))
-    
+    timesteps_unique , bands_unique = list(sorted(set( int(time) for time in timesteps))) , list(set(bands))
+    timesteps_unique = [str(val) for val in timesteps_unique]
     from collections import Counter 
     #A_K_  check this
     if(check):
@@ -113,6 +160,7 @@ def get_timesteps_bands(df , reg = -1 , check = False):
             assert bands_counter[band] == tu , "Some bands seem to be missing all timesteps."
     
     return timesteps_unique, bands_unique 
+
 def get_timesteps_bands_columns(timesteps,bands):
     cols = []
     for band in bands:
@@ -123,38 +171,73 @@ def get_timesteps_bands_columns(timesteps,bands):
         
 
 def get_timesteps(df,reg = -1,check = False):
-    '''
-    Get list of times (dates) that a dataframe has. 
-    Optionally check that all columns have values for either all or none of the timesteps. 
-    
-    '''
-    
-    
     
     raise Exception("This function is discountinued. Use get_timesteps_bands instead. Remember to unpack both in return value.")
     
-    print("Make sure the regex is called differently. Regex for imposing and not imposing YYYYMMDD is different, and should be.")
-    if(reg==-1):
-        warnings.warn("regex wasn't set. Setting this to '[0-9]+__. Note, this is not imposing YYYYMMDD and you should really send the regex you want. ",UserWarning)
-    else:
-        raise NotImplementedError('This functionality isn not implement yet. Just use default (reg=-1) for now.')
+
+def check_df_nulls(df , method = 'row' , rowthres = 0.3 , colthres = 0.3 , rowtolerance = 0, coltolerance=0):
+    """
+    Check null values in df. 
+    if method == row , check only for rows 
+    if method == col, check only for cols 
+    if method == both check both 
+    """
+    if(method == 'row' or method == 'both'):
+        assert rowthres >= 0 and rowthres <= 1
+        assert rowtolerance >=0 and rowtolerance <= df.shape[0]
         
-    #The regex is numbers of any length followed by double underscore.
-    # int() typecast works because we are using YYYY, and there's no leading zeroes
+        null_percentage = df.isnull().mean(axis=1)
+        rows_exceeding_threshold = df[null_percentage > rowthres]
+        if len(rows_exceeding_threshold) > rowtolerance:
+            raise ValueError(f"Number of rows with null percentage > {rowthres*100}% exceeds tolerance of {rowtolerance}.")
+        filtered_df_by_rows = df[null_percentage <= rowthres]
+        
+    if(method == 'col' or method == 'both'):
+        assert colthres >= 0 and colthres <= 1
+        assert coltolerance >=0 and coltolerance <= df.shape[1]
+        
+        null_percentage = df.isnull().mean(axis=0)
+        columns_exceeding_threshold = df.loc[:, null_percentage > colthres]
+        if len(columns_exceeding_threshold.columns) > coltolerance:
+            raise ValueError(f"Number of columns with null percentage > {colthres*100}% exceeds tolerance of {coltolerance}.")
+        filtered_df_by_cols = df.loc[:, null_percentage <= colthres]
+        
+    if(method == 'row'):
+        return filtered_df_by_rows 
+    elif(method == 'col'):
+        return filtered_df_by_cols
+    elif(method == 'both'):
+        return -1
+    else:
+        raise Exception(f"Method {method} not recognized. Use 'row','col' or 'both' ")
     
-    cols = sorted(set([int(col.split('__')[0]) for col in df.columns if(re.match(r'[0-9]+__',col))]))
-    
-    #A_K_ implement this. 
-    if(check):
-        raise NotImplementedError
-    
-    return cols 
-
-def sample_df(df,frac = 0.3):
-    return df.sample(frac=frac) 
-
+def filter_df_nulls(df , method = 'remcol',subset = None, perc = 0.3):
+    assert perc >=0 and perc<=1 ,"Perc should be b/w 0 and 1"
+    if(method == 'remrow'):
+        
+        if(subset is not None):
+            perc = 1 - perc # For df thres, it is the threshold of non nulls. 
+            df_filtered = df.dropna(subset=subset,thresh = perc*df.shape[1])
+            
+        else:
+            perc = 1- perc 
+            df_filtered = df.dropna(thresh = perc*df.shape[1])
+            perc = 1-perc
+            df_filtered1 = check_df_nulls(df , method = 'row',rowthres = perc , rowtolerance = df.shape[0])
+            assert df_filtered.equals(df_filtered1) , "check_df_nulls malfunction"
+    elif(method == 'remcol'):
+        df_filtered = check_df_nulls(df , method = 'col',colthres = perc , coltolerance = df.shape[1])
+        colsremoved = [col for col in df if col not in df_filtered]
+        print("Cols removed: \n",colsremoved)
+    else:
+        raise Exception(f"method {method} not recognized. Use remrow or remcol")
+        
+    new = df_filtered.shape[0] * df_filtered.shape[1] 
+    orig = df.shape[0] * df.shape[1]
+    print(f"Percentage of data removed: {((orig-new)/orig)*100} %")
+    return df_filtered 
 #default 30 percentage.
-def filter_df_nulls(df , method = 'remcol',subset=None, perc = 30):
+def OLD_filter_df_nulls(df , method = 'remcol',subset=None, perc = 30):
     if(method == 'remrow'):
         if subset is not None:
             df_filtered = df.dropna(subset=subset)
@@ -197,7 +280,7 @@ def target_remap(df , targetname , mapper={}, method='Lazy'):
         
     if method == 'Lazy':
         col= df[targetname] 
-        df[targetname] = [ mapper[val] for val in col]
+        df.loc[:,targetname] = [ mapper[val] for val in col]
         return df
     elif  method == 'Ignore':
         raise NotImplementedError
@@ -251,6 +334,18 @@ def sampled_to_reduced(data,by='mean',cutoff=10):
   return pd.DataFrame(lis)
 
     
+
+def add_hm_features(df , hm , onlycrop = True):
+    assert onlycrop ,"Other isn't implemented yet. But should be easy, just do it now."
+    newrows  = []
+    for rownum,row in df.iterrows():
+        uid = row['Unique_Id'] 
+        hmr = hm[hm.Unique_Id == uid].iloc[0]
+        newrow = row 
+        newrow['Crop_Type'] = hmr['Crop_Type']
+        newrows.append(newrow)
+        
+    return pd.DataFrame(newrows)
 
 
 ###################################################################################################### 

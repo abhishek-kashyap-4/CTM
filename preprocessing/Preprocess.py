@@ -7,10 +7,10 @@ Created on Mon Aug 19 11:14:19 2024
 import re
 import numpy as np
 import pandas as pd
+import warnings 
 
-
-from utils.utils import fix_column_syntax , filter_df_nulls , null_positions , target_remap , get_timesteps_bands
-
+from utils import utils 
+from tqdm import tqdm
 
 # A_K_ come back to this. 
 
@@ -49,49 +49,79 @@ def kalman_fill(df, columns):
 
     return df_filled
 
-def null_interpol(df):
-    timesteps , bands = get_timesteps_bands(df)
-    count = 1
-    for band in bands:
-        print(count/len(bands))
-        count += 1
-        cols = [str(time)+'__'+ band for time in timesteps]
-        df = kalman_fill(df,cols)
+
+
+def null_method(df , method ):
+    ' Method nulls = dont , remrow , remcol , strategy1 ,interpol_pass'
+    if(method == 'dont'):
+        pass 
+    elif(method == 'remrow'): 
+        df = utils.filter_df_nulls(df,method = method , perc = 0 ) 
+    elif(method =='remcol'):
+        df = utils.filter_df_nulls(df,method = method , perc = 0 ) 
+    elif( re.match('strategy',method)):
+        assert method.split('_')[-1] =='all' , f" Method {method} requesting all rows not be removed. Currently, This isn't possible."
+        perc = int(method.split('_')[1]) 
+        assert perc >=0 and perc <=100 , f"For method {method}, the number has to be in 0 -100"
+        perc /=100  
+        df = utils.filter_df_nulls(df,method = 'remcol' , perc = perc)
+        df = utils.filter_df_nulls(df,method = 'remrow' , perc = 0)
+
+    elif(re.match('interpol',method)):
+        method = method.split('_')[-1]
+        
+        if(method == 'pass'):
+            timesteps , bands = utils.get_timesteps_bands(df)
+            for band in tqdm(bands):
+                cols = [str(time)+'__'+ band for time in timesteps]
+                df[cols] = df[cols].ffill()
+        elif(method == 'kelman'):
+            timesteps , bands = utils.get_timesteps_bands(df)
+            # Correct, but bad way of assigning df 
+            for band in tqdm(bands):
+                cols = [str(time)+'__'+ band for time in timesteps]
+                df = kalman_fill(df,cols)
+            
+        else:
+            raise ValueError(f" Interpol method {method} not recognized. Look at config file for options.")
+    
+    else:
+        raise ValueError(f" method {method} not recognized. Look at config file for options.")
+    
     return df 
 
-
-
-def preprocess(df,targetname = 'CropType' ,mapper = {}, impose_date=True,method_nulls = 'remrow',subset=None ,method_remap = 'Lazy' ):
-    df = fix_column_syntax(df,from_re = r'[0-9]+_' , impose_date = impose_date)
+def preprocess(df,targetname = 'CropType' , which = 'Optical' ,mapper = {}, impose_date=True,method_nulls = 'interpol_pass' ,method_remap = 'Lazy' ):
     
-    df = filter_df_nulls(df , method= method_nulls,subset=subset)
-    nullp = null_positions(df)
     
-    assert len(nullp) == 0 ,"Null values detected."
-    df = target_remap(df , targetname , mapper =mapper, method=method_remap)
+    reg = r'[0-9]{8}__' if impose_date else r'[0-9]+__'
+    utils.check_column_syntax(df,kind = 'custom' , reg = reg )
+    
+    
+    df = null_method(df , method = method_nulls)
+
+    ## Normalize B columns 
+    if(which == 'Optical'):
+        cols  = [col for col in df.columns if re.match(r'[0-9]+__B',col)]
+        df.loc[:,cols] /= 1000 
+        
+    df = utils.target_remap(df , targetname , mapper =mapper, method=method_remap)
     return df 
-    
 
-
-def pipeline_executable(first_arg,targetname = 'CropType' ,mapper = {},impose_date=True,method_nulls = 'remrow',subset=None ,method_remap = 'Lazy'):
+def pipeline_executable(first_arg,targetname = 'Crop_Type' ,which = 'Optical',mapper = {},impose_date=True,method_nulls = 'remcol' ,method_remap = 'Lazy'):
     df = first_arg 
-    df = preprocess(df,targetname = targetname , mapper = mapper , impose_date = targetname , method_nulls = method_nulls , \
-                        subset = subset , method_remap = method_remap) 
+    df = preprocess(df,targetname = targetname , mapper = mapper , impose_date = impose_date , method_nulls = method_nulls , \
+                        method_remap = method_remap) 
+        
     return df 
     
     
 if __name__ == '__main__':
-    fname = 'Data\\Interim\\CGDD\\cgdd_Beta002.csv'
-    df = pd.read_csv(fname)
-    impose_date = True
-    
-    print(len(null_positions(df)))
-    df = null_interpol(df)
-    print(len(null_positions(df)))
-    
-    
-    2/0
-    df = pipeline_executable(df)
-    1/0
+    fname = 'Data\\Interim\\CGDD\\FieldOptical_CGDD.csv'
+    df = pd.read_csv(fname).drop(columns = ['Unnamed: 0'])
+    impose_date = False
+    method_nulls = 'interpol_pass' 
+    df = pipeline_executable(df,impose_date = impose_date,method_nulls = method_nulls)
+
+    df.to_csv('Data\\Interim\\Preprocessed\\FieldOptical_CGDD.csv',index=False)
     
         

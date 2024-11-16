@@ -60,6 +60,11 @@ def execute_pipeline_item(item ,config, saved_file = None,input_file=None,params
     -> After run, decide to save based on config file 
     -> When adding functionality to pass, make sure to not make errors. 
     '''   
+    
+    
+    if(config['FUNCTIONS'][item[0]]['skip']):
+        return  -16
+
     redo = False
     if(config['DEFAULTS']['run'] in ['saved' , 'saved_redo'] ):
         
@@ -69,12 +74,14 @@ def execute_pipeline_item(item ,config, saved_file = None,input_file=None,params
                 raise Exception(f"Run option is <<saved>> but Cloud file wasn't found at {GlobalVars.Cloud_file} ")
             elif(config['DEFAULTS']['run'] == 'saved_redo'):
                 redo = True
+                
             else:
                 raise Exception(f"Unknown option for Config-DEFAULTS-run: {config['DEFAULTS']['run']}")
         else:
             pass
         
-    elif(redo or config['DEFAULTS']['run']=='redo'):
+    if(redo or config['DEFAULTS']['run']=='redo'):
+        #A_K_ actually this may not be correct.
         redo = True # this is important for saving. 
         itemname , pack = item 
         if(not isinstance(input_file, (pd.DataFrame, list, dict))) :
@@ -82,11 +89,12 @@ def execute_pipeline_item(item ,config, saved_file = None,input_file=None,params
         params['first_arg'] = input_file
         retval = pack.pipeline_executable(**params)
         
-        
     elif(config['DEFAULTS']['run'] in ['redo_saved','manual']):
         raise NotImplementedError(f"The Runtype, <<{config['DEFAULTS']['run']}>> hasn't been implemented yet.")
     else:
-        raise Exception(f"Runtype <<{config['DEFAULTS']['run']}>> isn't recognized.")
+        # This is important , because its not a full if else chain.
+        if(config['DEFAULTS']['run'] not in ['saved_redo']):
+            raise Exception(f"Runtype <<{config['DEFAULTS']['run']}>> isn't recognized.")
         
     if(config['DEFAULTS']['after_run'] == 'save'):
         if(not redo):
@@ -100,7 +108,7 @@ def execute_pipeline_item(item ,config, saved_file = None,input_file=None,params
 
 def execute(config):
     if(config['GDD']):
-        hm,optical ,centroid_temperatures = prerequisites(config,gdd=True)
+        hm,optical ,hm_temperatures = prerequisites(config,gdd=True)
     else:
         hm,optical = prerequisites(config,gdd=False)
         
@@ -121,18 +129,40 @@ def execute(config):
                                         save_path = 'Data/Interim/Cloud/Optical_Cloudfilled_'+dictionary['GLOBALNAME_OUTPUT']+'.csv')
     
     
+    if(cloudmasked != -16):
+        utils.check_column_syntax(cloudmasked ,kind='date')
     
     # 2.1 CGDD 
     if(config['GDD']):
         
+        import compositing.GDDComposite_new as gddn 
+        item = ('GDDComposite_new',gddn)
+        params = config['FUNCTIONS']['GDDComposite_new']['params']
+        params['hm_temperatures'] = hm_temperatures
+        params['hm'] = hm
+        save_path = 'Data/Interim/CGDD/Optical_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
+        composited = execute_pipeline_item(item,config,
+                                           saved_file = save_path,
+                                           input_file = optical.copy() , 
+                                           params = params , 
+                                           save_path = save_path ) 
+        
+        
+        composited = utils.add_hm_features(composited,hm)
+        composited.to_csv(save_path)
+        utils.check_column_syntax(composited ,kind='timestep')
+        
+        
+        
+        '''
         import compositing.GenerateCentroidTemperaturesCGDD as gcc 
         item  = ('GenerateCentroidTemperaturesCGDD' , gcc)
         params =  config['FUNCTIONS']['GenerateCentroidTemperaturesCGDD']['params']
         centroids  = pd.read_csv('Data/Interim/post/temperature_V5_2023_centroids.csv')
         if(params['method'] == 'fixed'):
-            save_path = 'Data/Interim/Post/cgdd_v5_fixed_'+str(params['startdate'])+'_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
+            save_path = 'Data/Interim/Post/centroid_temperatures_cgdd_v5_fixed_'+str(params['startdate'])+'_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
         else:
-            save_path = 'Data/Interim/Post/cgdd_v5_dynamic_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
+            save_path = 'Data/Interim/Post/centroid_temperatures_cgdd_v5_dynamic_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
         cgdd = execute_pipeline_item(item , config , 
                                             input_file = centroids.copy(),
                                             params = params,
@@ -152,7 +182,10 @@ def execute(config):
                                             params = params,
                                             save_path = save_path)
         
-
+        
+        
+        utils.check_column_syntax(composited , kind = 'timestep',stricter = True)
+        '''
             
     # 2.2 Harmonised Time Composite
     elif(not config['GDD']):
@@ -171,7 +204,8 @@ def execute(config):
                                            input_file = optical.copy(),
                                            params = params , 
                                           save_path = save_path) 
-    
+        utils.check_column_syntax(composited , kind = 'timestep',stricter = True)
+        
     # 3. PreML
     ## 3.1 Preprocessing 
     import preprocessing.Preprocess as pp 
@@ -180,22 +214,27 @@ def execute(config):
     preprocessed = execute_pipeline_item(item,config,
                                          input_file = composited.copy() ,
                                          params = params ,
-                                         save_path ='Data/Interim/Preprocessed/Optical_Cloudfilled_preprocessed_'+dictionary['GLOBALNAME_OUTPUT']+'.csv')
+                                         save_path ='Data/Interim/Preprocessed/Optical_'+dictionary['GLOBALNAME_OUTPUT']+'.csv')
 
     ## 3.2 Feature Addition 
     
     import preprocessing.FeatureAddition as pfa 
     item = ('FeatureAddition',pfa)
     params = config['FUNCTIONS']['FeatureAddition']['params'] 
-    config['FUNCTIONS']['FeatureAddition']['params']['tim'] = True
+    #config['FUNCTIONS']['FeatureAddition']['params']['tim'] = True
     
     feature_added = execute_pipeline_item(item,config,
                                          input_file = preprocessed.copy(),
                                          params = params ,
-                                         save_path ='Data/Interim/Added/Optical_Cloudfilled_preprocessed_added_'+dictionary['GLOBALNAME_OUTPUT']+'.csv')
+                                         save_path ='Data/Interim/Added/Optical_'+dictionary['GLOBALNAME_OUTPUT']+'.csv')
     
 
     
+    import EDA.EDA_Functions as eda 
+    eda.band_series_by_croptype(feature_added,'NDVI')
+    
+    15/0
+
     
     ### 3.3 Feature selection 
     import preprocessing.FeatureSelection as pfs 
@@ -273,8 +312,8 @@ def prerequisites(config , gdd=True):
     optical = pd.read_csv(GlobalVars.optical_file)
     
     if(gdd):
-        centroid_temperatures = pd.read_csv(GlobalVars.CentroidTemperatures_file)
-        return hm,optical, centroid_temperatures
+        hm_temperatures = pd.read_csv(GlobalVars.hm_temperatures_file)
+        return hm,optical, hm_temperatures
     return hm,optical
     
     

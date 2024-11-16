@@ -1,4 +1,165 @@
-    # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Oct 29 15:40:12 2024
+
+@author: kashy
+"""
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Aug 21 00:32:37 2024
+
+@author: kashy
+"""
+
+
+import pandas as pd
+from datetime import datetime ,timedelta
+import numpy as np
+from GlobalVars import crop_avg_sow_date
+
+
+
+get_base_temp = {
+}
+
+def get_daily_temperatures(hm_daily , uid , asindex=False):
+    '''
+    Given a UID, get daily temperatures from the file. 
+    you wont know start and end dates here, just return everything. 
+    
+    '''
+    if(asindex):
+        
+        row =  hm_daily.loc[uid] 
+        print(type(row))
+    else:
+        row = hm_daily[hm_daily.Unique_Id == uid]
+        assert len(row) == 1 
+        row = row.iloc[0]
+    
+    print(row)
+    1/0
+
+
+
+def CGDD(df,hm_temperatures , hm , increment = 50):
+    '''
+  
+    Inputs:
+        1. Satellite Data  - hmV5 with Unique_Id
+        2. Daily temperatures - hmv5 with Unique_Id
+        3. hm that has croptype
+    
+    I am going to iterate over Satellite Data, ensuring we get all the rows. 
+        
+    1. Take the data frame
+    for row in iterrows:
+        - define the dates where you have equal GDD intervals 
+            - You can just get this from centroids.csv
+        - Aggregate among these intervals 
+        
+    Decision - do I compute centroidscsv separately, or include it in iterrows?
+        - Only daily temperatures are pre computed. 
+        
+    
+    
+    '''
+
+    newrows = {} 
+    
+    for rownum ,row in tqdm(df.iterrows() , total = df.shape[0]):
+        
+        uid = row['Unique_Id']
+        hm_temperature_row = hm_temperatures[hm_temperatures.Unique_Id == uid]
+        hm_row = hm[hm.Unique_Id == uid] 
+        
+        print(type(hm_temperature_row))
+        print(type(hm_row)) 
+        1/0
+        
+        
+        croptype = row['Crop_Type']
+        geometry = row['geometry']
+        
+        base_temp = get_base_temp[croptype]
+        
+        
+        daily_temps = get_daily_temps() #Don't know if I need to sent centroid or polygon 
+        # dictionary of date and value 
+        # Alternately, get 2 dicts for day and night 
+        
+        cummulation = 0 
+        threshold = 0
+        single_row = {}
+        for date in daily_temps:
+            # Add cummulation 0 in the beginning 
+            if(theshold >= increment):
+                # we fill make a decision about adding the previous non nan value, or taking a window and aggregating.
+                single_row[date] 
+            
+            
+        #for i in range(0,maxcgdd , increment):
+        
+
+  
+
+def GenerateCentroidTemperaturesCGDD(centroid_temperatures,increment,method,startdate = '2023-01-01'):
+    
+    all_rows = []
+    for rownum,row in centroid_temperatures.iterrows():
+        print(rownum*100/len(centroid_temperatures))
+        if(crop_avg_sow_date[row['Crop_Type']] ==-1):
+            continue
+        
+        if(type(row['Sow_Date']) != str):
+            start = datetime.strptime(crop_avg_sow_date[row['Crop_Type']],'%Y-%m-%d')
+        else:        
+            start = datetime.strptime(row['Sow_Date'],'%Y-%m-%d')
+        if(method=='fixed'):
+            start = datetime.strptime(startdate,'%Y-%m-%d')
+        
+        cummulation = 0
+        nextstep = 0
+        newrow = {'Start_date': start,'Crop_Type':row['Crop_Type'],\
+                  'Unique_Id':row['Unique_Id'], '.geo':row['.geo'],
+                  'Harv_Date':row['Harv_Date']}
+        currdate = start
+        while True:
+            if(cummulation>=nextstep):
+                newrow[nextstep] = cummulation
+                newrow[str(nextstep)+'_DATE'] = currdate.strftime('%Y%m%d')
+                nextstep+= increment
+            currdate = currdate + timedelta(days=1)
+            if(currdate.strftime('%Y%m%d')+'_GDD' not in centroid_temperatures.columns):
+                break 
+            cummulation += row[currdate.strftime('%Y%m%d')+'_GDD']
+        all_rows.append(newrow)
+    cgdd = pd.DataFrame(all_rows)
+    return cgdd
+    
+    
+def pipeline_executable(first_arg,method = 'fixed' , increment =25,startdate = '2023-01-01'):
+    centroid_temperatures = first_arg 
+    cgdd = GenerateCentroidTemperaturesCGDD(centroid_temperatures,increment=increment,method=method, startdate= startdate)
+    return cgdd
+    
+if __name__ == '__main__':
+    centroid_temperatures  = pd.read_csv("Data\\interim\\post\\temperature_V5_2023_centroids.csv",index_col=0)
+
+    method = 'fixed'
+    startdate = '2023-01-01'
+    increment = 25
+    
+    cgdd = GenerateCentroidTemperaturesCGDD(centroid_temperatures,increment,method,startdate = startdate)
+    
+    if(method=='fixed'):
+        cgdd.to_csv('Data\\interim\\post\\cgdd_v5_fixed_'+startdate+'.csv',index=False) 
+    else:
+        cgdd.to_csv('Data\\interim\\post\\cgdd_v5_dynamic.csv',index=False) 
+      
+'###############################################################################33333333'
+
+# -*- coding: utf-8 -*-
 """
 Created on Tue Oct 29 15:40:12 2024
 
@@ -336,4 +497,5 @@ if __name__ == '__main__':
     
     
 '+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+='
+
 

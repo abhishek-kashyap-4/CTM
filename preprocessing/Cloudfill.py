@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 
-from utils.utils import fix_column_syntax,get_timesteps_bands
+from utils.utils import fix_column_syntax,get_timesteps_bands ,check_column_syntax
 
 # Don't use Cloudmask as an input for cloudfillers since the nan values could have come from elsewhere.
 
@@ -79,15 +79,14 @@ def cloudmask(df, feature_pattern, threshold = 75,dropfeature=True):
 
     return df 
 
-def pipeline_executable(first_arg, reg =r'[0-9]{8}_',feature_pattern= 'CLDPRB',method = 'Mask'):
+def pipeline_executable(first_arg,feature_pattern= 'CLDPRB',method = 'Mask'):
     
     #A_K_
     if(method != 'Mask'):
         raise NotImplementedError
     df = first_arg
     
-    df = fix_column_syntax(df,from_re = reg)
-    
+    check_column_syntax(df,kind = 'date' )
     newdf = cloudmask(df ,feature_pattern,threshold=75)
     #newdf.to_csv('Data/Interim/Cloud/Optical_Cloudfilled.csv')
     return newdf
@@ -97,6 +96,10 @@ if __name__ == '__main__':
     
     fname = 'Data/Input/Satellite/Optical0.1.csv'
     df = pd.read_csv(fname)
+    
+    reg =  r'[0-9]{8}_'
+    
+    df = fix_column_syntax(df,from_re = reg)
     newdf = pipeline_executable(df)
     newdf.to_csv('Data/Interim/Cloud/Optical_Cloudfilled_charlie001.csv')
         

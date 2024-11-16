@@ -6,10 +6,10 @@
 ---
 
 # GDD
-GDD: False
+GDD: True
 
-GLOBALNAME_INPUT: 'Beta002'
-GLOBALNAME_OUTPUT: 'Beta002'
+GLOBALNAME_INPUT: 'Field01'
+GLOBALNAME_OUTPUT: 'Field01'
 
 # DEFAULTS
 DEFAULTS:
@@ -26,7 +26,7 @@ DEFAULTS:
     
     # With run  - saved_redo, search for a saved file. If doesn't exist, compute it.
     run_options : ['saved','redo' , 'saved_redo' , 'redo_saved' , 'manual']
-    run : 'redo'
+    run : 'saved_redo'
     
     after_run_options: ['save','pass']
     after_run: 'save'
@@ -62,19 +62,22 @@ RUN:
 
 FUNCTIONS: 
     CloudCorrection: 
+        skip: True 
         params: 
-            reg : '[0-9]{8}_'
             feature_pattern: 'CLDPRB'
             method: 'Mask'
         method_options: ['Mask','CloudFill']
         
         
     GenerateCentroidTemperatures:
+    
         seperate_window : True
         columns_to_copy_old : ['.geo','Crop_Type','Sow_Date','Field_Id','Harv_Date']
-        columns_to_copy : ['.geo','Crop_Type','Sow_Date','Unique_Id','Harv_Date']
+        columns_to_copy : ['Unique_Id']
+        
     
     GenerateCentroidTemperaturesCGDD:
+        skip: True 
         params: 
             increment : 25
             method : 'fixed' 
@@ -83,6 +86,7 @@ FUNCTIONS:
         all_methods : ['dynamic' , 'fixed']
         
     HarmonisedGDDComposite:
+        skip: True 
         params:
             interpol_method: 'closest'
             increment: 50
@@ -91,25 +95,35 @@ FUNCTIONS:
             verbose: True
             date_method: 'fixed'
         interpol_methods: ['lookbehind' , 'lookahead' , 'closest' , 'reduce_mean_n' , 'reduce_median_n' ,  'reduce_mean_extreme' , 'reduce_median_extreme'  , 'reduce_mean_extreme_left' ,'reduce_mean_extreme_right'] 
-        
+    
+    GDDComposite_new:
+        skip: False 
+        params:
+            anchor_save: 'Data\Interim\CGDD\FieldSAR_anchors.csv'
+            # For now, the data files hm and hm_temperature are being read directly here. 
+            increment: 100
+            
     HarmonisedTimeComposite:
+        skip: False
         params:
             fixed: False 
             fixed_date: '20230101'
             increment: 20
     Preprocess:
+        skip: False
         params:
-            impose_date: True
-            method_nulls: 'remcol'
-            #subset: None
+            which: 'Optical'
+            impose_date: False
+            method_nulls: 'interpol_pass'
             method_remap: 'Lazy'
             targetname: 'Crop_Type' 
             #mapper: {}
-        method_nulls_options: ['remrow','remcol']
+        method_nulls_options: ['dont','remrow','remcol','strategy_<num for cols>_all' , 'interpol_pass','interpol_kelman'] 
         method_remap_options: ['Lazy' , 'Drop' , 'Ignore' , 'Raise' ]
             
     
     FeatureAddition:
+        skip: False
         params:
             time_indexes: 'all'
             comb: True
@@ -117,13 +131,16 @@ FUNCTIONS:
             STN: False 
             tim_method: 'Full' 
             STN_w: 3
+            
     FeatureSelection:
+        skip: False
         params: 
             by: 'covar'
             correlation_threshold: 0.7
             cutoff: 15
             verbose: True
     Models:
+        skip: False
         params:
             target: -1
             models: ['RF']

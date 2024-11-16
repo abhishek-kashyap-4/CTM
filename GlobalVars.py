@@ -10,8 +10,13 @@ year = '2023'
 
 # Files
 harmonised_file = 'Data/input/harmonisedv5/harmonised_v5_'+year+'_csv/hmv5'+year+'.csv'
-optical_file = 'Data/input/Satellite/Optical0.1.csv'
+optical_file = 'Data/input/Satellite/Field_Optical.csv'
+
+#DEFUCNT. Use hm_temperatures
 CentroidTemperatures_file = 'Data/interim/post/temperature_V5_'+year+'_centroids.csv'
+hm_temperatures_file = 'Data\\Interim\\post\\hm_v5_2023_temperatures.csv'
+
+
 Cloud_file = 'Data/interim/Cloud/Optical_Cloudfilled.csv'
 
 
@@ -36,6 +41,7 @@ crop_base_temp = {'Abandoned': 0, 'Fallow': 0, 'Grassland': 0,
                   'Winter_Rapeseed': 0, 'Winter_Rye': 0,
                   'Winter_Wheat': 0}
 
+# Let it be for code compatibility
 crop_avg_sow_date = {'Abandoned': -1, 'Fallow': -1, 'Grassland': '2023-03-27', 
                      'Maize': '2023-05-05', 'Maize_Silage': '2023-05-14', 
                      'Mined': -1, 'Oats': '2023-03-19', 

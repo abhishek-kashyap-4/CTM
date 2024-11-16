@@ -108,7 +108,7 @@ gdf_hm = gpd.GeoDataFrame(hm, geometry='.geo')
 #pd.DataFrame(skipindexes).to_csv('Data/skipsfull.csv')
 
 
-df = pd.read_csv('Data/EnR.csv').drop(columns = ['Unnamed: 0'])
+df = pd.read_csv('Data/EnR/EnR.csv').drop(columns = ['Unnamed: 0'])
 df = remove_nulls(df)
 
 df['.geo'] = df['.geo'].apply(lambda x: Point(list(ast.literal_eval(x))))

@@ -9,7 +9,14 @@ import pandas as pd
 import datetime
 from datetime import timedelta
 
-     
+import yaml
+with open("config.yaml") as stream:
+    try:
+        dictionary = yaml.safe_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
+
+        
 from GlobalVars import crop_base_temp 
 
 from tk_printer import root,print_to_window
@@ -79,39 +86,32 @@ def generate(start,end,hm,columns_to_copy):
     for col in columns_to_copy:
         temperature_df[col] = hm[col]
     
-    
-    return temperature_df    
-        
-
-global_variables = {}
-
-
-def UNUSEDpipeline_executable(first_arg , *params):
-    df = first_arg 
-    dictionary['FUNCTIONS']['GenerateCentroidTemperatures']['columns_to_copy']
-    
     # Maybe instead of this, we can have a function use 1 window no matter 
     #How many times it is called. 
     #I don't want to pass the window as an argument, since its supposed to be
     #excluded from the functionality
     # We will do this by - main creating a window for all functions that 
     #config says, and here you look at config dictionary and load that window.
-    if(dictionary['FUNCTIONS']['GenerateCentroidTemperatures']['seperate_window']):
+    if(dictionary['GenerateCentroidTemperatures']['seperate_window']):
         
         import tkinter as tk
         window  = tk.Toplevel(root)
         window.title("GenerateCentroidTemperatures")
         print_to_window(window, locals())
-    
+    return temperature_df    
+        
+
+global_variables = {}
+
 
 if __name__=='__main__':
     
     start = datetime.date(2022,1,1)
     end = datetime.date(2023,12,30)
     harmonised2023 = pd.read_csv('Data\\input\\harmonisedv5\\harmonised_v5_2023_csv\\hmv52023.csv')
-    columns_to_copy = ['Unique_Id']
-    temperaturedf = generate(start,end,harmonised2023,columns_to_copy)
-    temperaturedf.to_csv("Data\\interim\\post\\hm_v5_2023_temperatures.csv")
+    
+    temperaturedf = generate(start,end,harmonised2023,dictionary['GenerateCentroidTemperatures']['columns_to_copy'])
+    temperaturedf.to_csv("Data\\interim\\post\\temperature_V5_2023_centroids.csv")
     
     
 

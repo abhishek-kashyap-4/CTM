@@ -223,7 +223,7 @@ def get_col_variances(data,threshold=0):
 ####  Time series with mean, variance (or) median , variance. 
 #### Box plot of a band (A band's signature)
     
-def plot_mean_std(df,bands = ['NDVI'],croptypes = [],method='mean',show=True,std=True,append='',xl='GDD',tle='Mean and std for band'):
+def plot_mean_std(df,bands = ['NDVI'],croptypes = [],method='mean',show=True,std=True,append='',xl='Time / GDD',tle='Mean and std for band'):
     '''
     Multiple Timesteps, Single band, Multiple points. 
     method: bands, croptype
@@ -260,15 +260,16 @@ def plot_mean_std(df,bands = ['NDVI'],croptypes = [],method='mean',show=True,std
     return values, stdvalues
 
 #How time series of the average value of a band across all indices compare?
-def band_series_by_croptype(df,band,crops = []):
+def band_series_by_croptype(df,band,crops = [] , method = 'mean'):
   '''
   If crops is null, get all crops.
   Else, get specified crops
   '''
+  
   def resort(cols):
     dig = sorted([int(col.split('__')[0]) for col in cols])
     z = list(set([col.split('__')[1] for col in cols]))
-    assert len(z) == 1
+    assert len(z) == 1 , z
     return [ str(di)+'__'+z[0] for di in dig]
   lines = []
   legends = []
@@ -278,8 +279,12 @@ def band_series_by_croptype(df,band,crops = []):
   for Crop_Type in crops:
     crop = df[df.Crop_Type == Crop_Type]
     #line = [crop[col].mean() for col in crop.columns if(re.search(r'^[0-9]{1,2}_'+band+'$',col))] #End operator, $ is important here.
-    cols = resort([col for col in crop.columns if(re.search(r'^[0-9]{1,2}__'+band+'$',col))]) # want 10 to be after 9, not after 1
-    line = [crop[col].mean() for col in cols]
+    cols = [col for col in crop.columns if re.match(r'[0-9]{1,2}__'+band,col) ]
+    cols = resort(cols) # want 10 to be after 9, not after 1
+    if(method == 'mean'):      
+        line = [crop[col].mean() for col in cols]
+    elif(method == 'median'):
+        line = [crop[col].mean() for col in cols]
     lines.append(line)
     legends.append(Crop_Type)
     plt.plot(line,label = Crop_Type)
@@ -321,5 +326,5 @@ def value_counts(df , col = 'Crop_Type',method = 'cat'):
 #### 2.(Agg 2.2 boxplot) Time shift of the same band of all data points
 #### 3. <DONE> Check if any band is completely null
 #### 4. (2.1 , 3) Check cloudiness / nulls  range of every timestep. 
-#### 4.1Check if any cloud is completely null or not null.
-#### 
+#### 4.1 Check if any cloud is completely null or not null.
+#### 5. (2.2 avg variance across time) Variance comparision of cgdd, time axis. 
