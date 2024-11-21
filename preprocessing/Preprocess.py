@@ -74,7 +74,7 @@ def null_method(df , method ):
             timesteps , bands = utils.get_timesteps_bands(df)
             for band in tqdm(bands):
                 cols = [str(time)+'__'+ band for time in timesteps]
-                df[cols] = df[cols].ffill()
+                df[cols] = df[cols].ffill(axis = 1)
         elif(method == 'kelman'):
             timesteps , bands = utils.get_timesteps_bands(df)
             # Correct, but bad way of assigning df 
@@ -118,6 +118,7 @@ def pipeline_executable(first_arg,targetname = 'Crop_Type' ,which = 'Optical',ma
 if __name__ == '__main__':
     fname = 'Data\\Interim\\CGDD\\FieldOptical_CGDD.csv'
     df = pd.read_csv(fname).drop(columns = ['Unnamed: 0'])
+    
     impose_date = False
     method_nulls = 'interpol_pass' 
     df = pipeline_executable(df,impose_date = impose_date,method_nulls = method_nulls)

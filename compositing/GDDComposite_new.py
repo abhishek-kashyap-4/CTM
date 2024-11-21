@@ -146,17 +146,18 @@ def CGDD(df,hm_temperatures , hm ,start_method = 'sowdate', fixed_date = '202301
                 aggregated_df[str(key)+'__'+band] = row[[date+'__'+band for date in dates]].mean() 
         
         newrows.append(aggregated_df)
-        
+    
     return pd.DataFrame(newrows) , pd.DataFrame(anchors)
         
             
 
-def pipeline_executable(first_arg , hm_temperatures = [] , hm = [] , increment = 75,anchor_save = -1):
+def pipeline_executable(first_arg , hm_temperatures = [] , hm = [] , increment = 75,anchor_save = -1,start_method = 'sowdate', fixed_date = '20230101'):
     df = first_arg 
     
     assert len(hm_temperatures) > 0 , "Provide hm_temperatures" 
     assert len(hm) > 0 , "Provide hm " 
-    final , anchors = CGDD(df , hm_temperatures , hm , increment = increment) 
+    final , anchors = CGDD(df , hm_temperatures , hm , increment = increment,start_method = start_method, fixed_date = fixed_date) 
+    anchors = anchors.rename(columns = {'0':'Unique_Id'})
     anchors.to_csv(anchor_save)
     return final 
     

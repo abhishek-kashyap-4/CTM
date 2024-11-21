@@ -79,7 +79,7 @@ def cloudmask(df, feature_pattern, threshold = 75,dropfeature=True):
 
     return df 
 
-def pipeline_executable(first_arg,feature_pattern= 'CLDPRB',method = 'Mask'):
+def pipeline_executable(first_arg,feature_pattern= 'CLDPRB',method = 'Mask',threshold = 75):
     
     #A_K_
     if(method != 'Mask'):
@@ -87,7 +87,7 @@ def pipeline_executable(first_arg,feature_pattern= 'CLDPRB',method = 'Mask'):
     df = first_arg
     
     check_column_syntax(df,kind = 'date' )
-    newdf = cloudmask(df ,feature_pattern,threshold=75)
+    newdf = cloudmask(df ,feature_pattern,threshold=threshold)
     #newdf.to_csv('Data/Interim/Cloud/Optical_Cloudfilled.csv')
     return newdf
     

@@ -228,6 +228,7 @@ def plot_mean_std(df,bands = ['NDVI'],croptypes = [],method='mean',show=True,std
     Multiple Timesteps, Single band, Multiple points. 
     method: bands, croptype
     '''
+    plt.figure(3434778)
     sns.set(style="darkgrid")
     
     
@@ -257,6 +258,7 @@ def plot_mean_std(df,bands = ['NDVI'],croptypes = [],method='mean',show=True,std
         plt.xlabel('Time / GDD axis. ')
         plt.ylabel(f'Bands - {bands}')
         plt.title('Mean band series')
+        plt.show()
     return values, stdvalues
 
 #How time series of the average value of a band across all indices compare?
@@ -279,7 +281,7 @@ def band_series_by_croptype(df,band,crops = [] , method = 'mean'):
   for Crop_Type in crops:
     crop = df[df.Crop_Type == Crop_Type]
     #line = [crop[col].mean() for col in crop.columns if(re.search(r'^[0-9]{1,2}_'+band+'$',col))] #End operator, $ is important here.
-    cols = [col for col in crop.columns if re.match(r'[0-9]{1,2}__'+band,col) ]
+    cols = [col for col in crop.columns if re.match(r'[0-9]+__'+band,col) ]
     cols = resort(cols) # want 10 to be after 9, not after 1
     if(method == 'mean'):      
         line = [crop[col].mean() for col in cols]

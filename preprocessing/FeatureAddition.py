@@ -198,15 +198,15 @@ def pipeline_executable(first_arg , time_indexes = 'all', comb=True , tim = Fals
 
 if __name__ == '__main__':
     
-    df = pd.read_csv('Data/Interim/Preprocessed/FieldOptical_CGDD.csv')
+    df = pd.read_csv('Data/Interim/Preprocessed/Optical_Field01.csv')
     check_column_syntax(df , kind = 'timestep')
     
     warnings.warn("Unique_Id has null values. I think its from sjoin in EnRtext_to_csv2. you've to correct that.",UserWarning)
     df = df.dropna(subset = ['Unique_Id'])
 
     
-    addeddf = pipeline_executable(df)
-    addeddf.to_csv('Data/Interim/Added/FieldOptical_CGDD.csv')
+    addeddf = pipeline_executable(df , tim=True)
+    addeddf.to_csv('Data/Interim/Added/Optical_Field01.csv')
     
     
 

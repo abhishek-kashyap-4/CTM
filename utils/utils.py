@@ -78,7 +78,7 @@ def check_column_syntax(df, kind = 'generic' , reg = r'[0-9]+__',stricter = Fals
     4 If kind is genetic, regex is [0-9]+__
     '''
     if(kind == 'timestep'):
-        regex = r'[0-9]{1,2}__' 
+        regex = r'[0-9]{1,3}__' 
     elif(kind == 'date'):
         regex = r'[0-9]{8}__'
     elif(kind == 'custom'):
@@ -335,14 +335,16 @@ def sampled_to_reduced(data,by='mean',cutoff=10):
 
     
 
-def add_hm_features(df , hm , onlycrop = True):
-    assert onlycrop ,"Other isn't implemented yet. But should be easy, just do it now."
+def add_hm_features(df , hm , features = ['Crop_Type']):
+    
     newrows  = []
-    for rownum,row in df.iterrows():
+    for rownum,row in df.iterrows(): 
         uid = row['Unique_Id'] 
         hmr = hm[hm.Unique_Id == uid].iloc[0]
         newrow = row 
-        newrow['Crop_Type'] = hmr['Crop_Type']
+        for feature in features:
+            newrow[feature] = hmr[feature]
+            
         newrows.append(newrow)
         
     return pd.DataFrame(newrows)

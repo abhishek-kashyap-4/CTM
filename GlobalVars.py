@@ -4,21 +4,28 @@ Created on Tue Aug 20 18:04:06 2024
 
 @author: kashy
 """
-
+which = 'annotatedNDVI'
 year = '2023'
 
 
 # Files
-harmonised_file = 'Data/input/harmonisedv5/harmonised_v5_'+year+'_csv/hmv5'+year+'.csv'
-optical_file = 'Data/input/Satellite/Field_Optical.csv'
+if(which == 'veredi'):
+    harmonised_file = 'Data/input/harmonisedv5/harmonised_v5_'+year+'_csv/hmv5'+year+'.csv'
+    optical_file = 'Data/input/Satellite/Field_Optical.csv'
 
-#DEFUCNT. Use hm_temperatures
-CentroidTemperatures_file = 'Data/interim/post/temperature_V5_'+year+'_centroids.csv'
-hm_temperatures_file = 'Data\\Interim\\post\\hm_v5_2023_temperatures.csv'
+    #DEFUCNT. Use hm_temperatures
+    CentroidTemperatures_file = 'Data/interim/post/temperature_V5_'+year+'_centroids.csv'
+    hm_temperatures_file = 'Data\\Interim\\post\\hm_v5_2023_temperatures.csv'
 
-
-Cloud_file = 'Data/interim/Cloud/Optical_Cloudfilled.csv'
-
+    Cloud_file = 'Data/interim/Cloud/Optical_Cloudfilled.csv'
+elif(which == 'annotated'):
+    harmonised_file = 'Data/input/harmonisedv5/Annotated_hm.csv'
+    optical_file = 'Data/input/Satellite/Point_Optical.csv'
+    Cloud_file = ''
+elif(which == 'annotatedNDVI'):
+    harmonised_file = 'Data/input/harmonisedv5/Annotated_hm_NDVI.csv'
+    optical_file = 'Data/input/Satellite/Point_OpticalNDVI.csv'
+    Cloud_file = ''
 
 target = 'Crop_Type'
 
@@ -52,3 +59,5 @@ crop_avg_sow_date = {'Abandoned': -1, 'Fallow': -1, 'Grassland': '2023-03-27',
                      'Winter_Wheat': '2022-10-03'}
                      
 crop_list = crop_base_temp.keys()
+
+target_remap_annotated = {'Fallow':'Fallow', 'Non_crop':'Non_crop', 'Rapeseed':'Rapeseed', 'Summer_cro':'Summer_cro', 'Winter_cer':'Winter_cer'}

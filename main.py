@@ -63,7 +63,7 @@ def execute_pipeline_item(item ,config, saved_file = None,input_file=None,params
     
     
     if(config['FUNCTIONS'][item[0]]['skip']):
-        return  -16
+        return  []
 
     redo = False
     if(config['DEFAULTS']['run'] in ['saved' , 'saved_redo'] ):
@@ -113,7 +113,7 @@ def execute(config):
         hm,optical = prerequisites(config,gdd=False)
         
         # You can avoid null value problems by dropping SowDate for non GDD
-        optical = optical.drop(columns= ['Sow_Date'])
+        #optical = optical.drop(columns= ['Sow_Date'])
     
     optical = utils.fix_column_syntax(optical,from_re = '[0-9]{8}_')
     
@@ -129,7 +129,7 @@ def execute(config):
                                         save_path = 'Data/Interim/Cloud/Optical_Cloudfilled_'+dictionary['GLOBALNAME_OUTPUT']+'.csv')
     
     
-    if(cloudmasked != -16):
+    if(len(cloudmasked) > 0):
         utils.check_column_syntax(cloudmasked ,kind='date')
     
     # 2.1 CGDD 
@@ -146,12 +146,6 @@ def execute(config):
                                            input_file = optical.copy() , 
                                            params = params , 
                                            save_path = save_path ) 
-        
-        
-        composited = utils.add_hm_features(composited,hm)
-        composited.to_csv(save_path)
-        utils.check_column_syntax(composited ,kind='timestep')
-        
         
         
         '''
@@ -186,7 +180,7 @@ def execute(config):
         
         utils.check_column_syntax(composited , kind = 'timestep',stricter = True)
         '''
-            
+        
     # 2.2 Harmonised Time Composite
     elif(not config['GDD']):
         import compositing.Harmonised_Time_Composite as htm 
@@ -206,11 +200,24 @@ def execute(config):
                                           save_path = save_path) 
         utils.check_column_syntax(composited , kind = 'timestep',stricter = True)
         
+        
+    # Compositing postprocess.   
+    if(config['datakind'] in ['annotated' ]):
+        composited = utils.add_hm_features(composited,hm,features = ['Crop_Type','lat'])
+    else:
+        composited = utils.add_hm_features(composited,hm,features = ['Crop_Type','Sow_Date'])
+    
+    #composited = composited[composited.Sow_Date.notna()]
+    utils.check_column_syntax(composited ,kind='timestep')
+    
+    
     # 3. PreML
     ## 3.1 Preprocessing 
     import preprocessing.Preprocess as pp 
     item = ('Preprocess',pp)
     params = config['FUNCTIONS']['Preprocess']['params'] 
+    if(config['datakind'] in ['annotated']):
+        params['mapper'] = GlobalVars.target_remap_annotated
     preprocessed = execute_pipeline_item(item,config,
                                          input_file = composited.copy() ,
                                          params = params ,
@@ -231,7 +238,8 @@ def execute(config):
 
     
     import EDA.EDA_Functions as eda 
-    eda.band_series_by_croptype(feature_added,'NDVI')
+    eda.band_series_by_croptype(feature_added,'NDVI',method='median')
+    eda.plot_mean_std(feature_added , bands = ['NDVI'],croptypes = ['Summer_cro'])
     
     15/0
 
@@ -274,11 +282,116 @@ def execute(config):
     
 
     
+def execute_01(config)  :
+    '''
+    In this version, read the optical file, 
+    filter based on sowdate, croptype etc. 
+    
+    select n random points, do compositing several ways  
+    Preprocess , add features 
+    and plot the results. 
+    -> I want to see if gdd is working properly. 
+    
+    '''
+    crop = 'Winter_Wheat'
+    
+    hm,optical ,hm_temperatures = prerequisites(config,gdd=True)
+    optical = utils.fix_column_syntax(optical,from_re = '[0-9]{8}_')
+    optical = utils.add_hm_features(optical,hm,features = ['Crop_Type','Sow_Date'])
+    optical = optical[optical.Crop_Type == crop] 
+    
+    print(optical)
+    optical = optical.sample(n=1)
+    
+    
+    # 1. Cloud Masking/Filling
+    import preprocessing.Cloudfill as cl
+    item = ('CloudCorrection',cl)
+    params = config['FUNCTIONS']['CloudCorrection']['params']
+    optical = execute_pipeline_item(item , config , 
+                                        input_file = optical.copy(),
+                                        params = params,
+                                        )
     
     
     
     
+    import compositing.GDDComposite_new as gddn 
+    item = ('GDDComposite_new',gddn)
+    params = config['FUNCTIONS']['GDDComposite_new']['params']
+    params['hm_temperatures'] = hm_temperatures
+    params['hm'] = hm
+    print("GDD increment:" ,params['increment'])
+    gdd = execute_pipeline_item(item,config,
+                                       input_file = optical.copy() , 
+                                       params = params ,  )
     
+    
+    import compositing.Harmonised_Time_Composite as htm 
+    item  = ('HarmonisedTimeComposite',htm)
+    params = config['FUNCTIONS']['HarmonisedTimeComposite']['params'] 
+    params['bands'] = GlobalVars.optical_bands 
+    print("Time increment:" ,params['increment'])
+
+    time = execute_pipeline_item(item, config,
+                                       input_file = optical.copy(),
+                                       params = params ,) 
+    
+    
+    
+    
+        
+    def do(composited):
+        # Compositing postprocess.    
+        composited = utils.add_hm_features(composited,hm,features = ['Crop_Type','Sow_Date'])
+        #utils.check_column_syntax(composited , kind = 'timestep',stricter = True)
+
+        
+        # 3. PreML
+        ## 3.1 Preprocessing 
+        import preprocessing.Preprocess as pp 
+        item = ('Preprocess',pp)
+        params = config['FUNCTIONS']['Preprocess']['params'] 
+        preprocessed = execute_pipeline_item(item,config,
+                                             input_file = composited.copy() ,
+                                             params = params )
+    
+        ## 3.2 Feature Addition 
+        
+        import preprocessing.FeatureAddition as pfa 
+        item = ('FeatureAddition',pfa)
+        params = config['FUNCTIONS']['FeatureAddition']['params'] 
+        #config['FUNCTIONS']['FeatureAddition']['params']['tim'] = True
+        
+        feature_added = execute_pipeline_item(item,config,
+                                             input_file = preprocessed.copy(),
+                                             params = params ,
+                                             save_path ='Data/Interim/Added/Optical_'+dictionary['GLOBALNAME_OUTPUT']+'.csv')
+        
+    
+        return feature_added 
+    
+    
+    
+    feature_added = do(optical)
+    print(feature_added)
+    import EDA.EDA_Functions as eda 
+    eda.band_series_by_croptype(feature_added,'NDVI',method='median')
+    eda.plot_mean_std(feature_added , bands = ['NDVI'],croptypes = ['Wheat'])    
+    
+    feature_added = do(gdd )
+    import EDA.EDA_Functions as eda 
+    eda.band_series_by_croptype(feature_added,'NDVI',method='median')
+    eda.plot_mean_std(feature_added , bands = ['NDVI'],croptypes = ['Wheat'])
+    
+    feature_added = do(time )
+    import EDA.EDA_Functions as eda 
+    eda.band_series_by_croptype(feature_added,'NDVI',method='median')
+    eda.plot_mean_std(feature_added , bands = ['NDVI'],croptypes = ['Wheat'])    
+     
+   
+     
+
         
         
         
@@ -297,6 +410,7 @@ def ConfigWrapper(fname):
     Load config, overwrite changes with special arguments. 
     '''
     dictionary  = get_base_config_dictionary(fname)
+    assert dictionary['datakind'] == GlobalVars.which, "Data version incompatibility"
     # no overwriting changes currently.
     # But, I am not implementing until GeneratingCentroidTemperatures. 
     
@@ -310,7 +424,10 @@ def prerequisites(config , gdd=True):
     # List of data that's essential for the pipeline.
     hm =  pd.read_csv(GlobalVars.harmonised_file)
     optical = pd.read_csv(GlobalVars.optical_file)
-    
+    if(config['datakind'] in ['annotated']):
+        
+        hm = hm.rename(columns={'Class_st':'Crop_Type'})
+        
     if(gdd):
         hm_temperatures = pd.read_csv(GlobalVars.hm_temperatures_file)
         return hm,optical, hm_temperatures

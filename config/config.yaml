@@ -5,11 +5,12 @@
 
 ---
 
+datakind: 'annotatedNDVI'
 # GDD
-GDD: True
+GDD: False
 
-GLOBALNAME_INPUT: 'Field01'
-GLOBALNAME_OUTPUT: 'Field01'
+GLOBALNAME_INPUT: 'Point01NDVI'
+GLOBALNAME_OUTPUT: 'Point01NDVI'
 
 # DEFAULTS
 DEFAULTS:
@@ -66,6 +67,7 @@ FUNCTIONS:
         params: 
             feature_pattern: 'CLDPRB'
             method: 'Mask'
+            threshold: 50
         method_options: ['Mask','CloudFill']
         
         
@@ -77,19 +79,19 @@ FUNCTIONS:
         
     
     GenerateCentroidTemperaturesCGDD:
-        skip: True 
+        skip: False 
         params: 
             increment : 25
-            method : 'fixed' 
+            method : 'dynamic' 
             startdate : '2023-01-01'
         seperate_window : True
         all_methods : ['dynamic' , 'fixed']
         
     HarmonisedGDDComposite:
-        skip: True 
+        skip: False 
         params:
             interpol_method: 'closest'
-            increment: 50
+            increment: 100
             extreme: 10
             maxcgdd: 5000
             verbose: True
@@ -98,9 +100,12 @@ FUNCTIONS:
     
     GDDComposite_new:
         skip: False 
+        start_methods: ['fixed','sowdate','notnull'] #notnull isn't tested.
         params:
-            anchor_save: 'Data\Interim\CGDD\FieldSAR_anchors.csv'
-            # For now, the data files hm and hm_temperature are being read directly here. 
+            anchor_save: 'Data\Interim\CGDD\FieldOptical_anchors.csv'
+            start_method: 'sowdate'
+            fixed_date: '20230101'
+            # You need to add hm , hm_temperatures as arguments from the pipline.
             increment: 100
             
     HarmonisedTimeComposite:
@@ -127,7 +132,7 @@ FUNCTIONS:
         params:
             time_indexes: 'all'
             comb: True
-            tim: False 
+            tim: True 
             STN: False 
             tim_method: 'Full' 
             STN_w: 3
