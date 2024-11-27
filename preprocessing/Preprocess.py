@@ -71,12 +71,12 @@ def null_method(df , method ):
         method = method.split('_')[-1]
         
         if(method == 'pass'):
-            timesteps , bands = utils.get_timesteps_bands(df)
+            timesteps , bands = utils.get_timesteps_bands(df,reg = '[0-9]+__')
             for band in tqdm(bands):
                 cols = [str(time)+'__'+ band for time in timesteps]
-                df[cols] = df[cols].ffill(axis = 1)
+                df[cols] = df[cols].ffill(axis = 1).bfill(axis=1)
         elif(method == 'kelman'):
-            timesteps , bands = utils.get_timesteps_bands(df)
+            timesteps , bands = utils.get_timesteps_bands(df,reg='[0-9]+__')
             # Correct, but bad way of assigning df 
             for band in tqdm(bands):
                 cols = [str(time)+'__'+ band for time in timesteps]
@@ -89,8 +89,34 @@ def null_method(df , method ):
         raise ValueError(f" method {method} not recognized. Look at config file for options.")
     
     return df 
+    
+def smoothing(df , method = 'sav_gol',window = 5 , polyorder = 2):
+    '''
+    Apply a smoothing technique on the dataframe.
+    '''
+    
+    if(method == 'sav_gol'):
+        from scipy.signal import savgol_filter
+        timesteps , bands = utils.get_timesteps_bands(df,reg = r'[0-9]+__') 
+        for band in bands:
+            cols = [str(time)+'__'+band for time in timesteps]
+            for rownum, row in df[cols].iterrows():
+                savgol_filter(row, window, polyorder)
+            
+            df[cols] = pd.DataFrame(
+                    df[cols].apply(lambda x: savgol_filter(x.values, window, polyorder), axis=1).tolist(),
+                    index=df.index,
+                    columns=cols
+                )
+            #df[cols]  = df[cols].apply(lambda x: savgol_filter(x.values, window, polyorder), axis=1) 
+    else:
+        raise Exception("Any other method than savgol isn't recognized")
+    
+    return df 
+    
 
-def preprocess(df,targetname = 'CropType' , which = 'Optical' ,mapper = {}, impose_date=True,method_nulls = 'interpol_pass' ,method_remap = 'Lazy' ):
+# COnsider using **kwargs
+def preprocess(df,targetname = 'CropType' , which = 'Optical' ,mapper = {}, impose_date=True,method_nulls = 'interpol_pass' ,method_remap = 'Lazy' , method_smooth= 'sav_gol',window=5,polyorder = 2):
     
     
     reg = r'[0-9]{8}__' if impose_date else r'[0-9]+__'
@@ -98,19 +124,24 @@ def preprocess(df,targetname = 'CropType' , which = 'Optical' ,mapper = {}, impo
     
     
     df = null_method(df , method = method_nulls)
-
+    null_positions = utils.null_positions(df)
+    
+    #assert len(null_positions) == 0 ,f"{len(null_positions)}"
     ## Normalize B columns 
     if(which == 'Optical'):
         cols  = [col for col in df.columns if re.match(r'[0-9]+__B',col)]
         df.loc[:,cols] /= 1000 
         
     df = utils.target_remap(df , targetname , mapper =mapper, method=method_remap)
+    
+    
+    df = smoothing(df, method= method_smooth,window=window,polyorder = polyorder)
     return df 
-
-def pipeline_executable(first_arg,targetname = 'Crop_Type' ,which = 'Optical',mapper = {},impose_date=True,method_nulls = 'remcol' ,method_remap = 'Lazy'):
+# COnsider using **kwargs
+def pipeline_executable(first_arg,targetname = 'Crop_Type' ,which = 'Optical',mapper = {},impose_date=True,method_nulls = 'remcol' ,method_remap = 'Lazy',method_smooth= 'sav_gol',window=5,polyorder = 2):
     df = first_arg 
     df = preprocess(df,targetname = targetname , mapper = mapper , impose_date = impose_date , method_nulls = method_nulls , \
-                        method_remap = method_remap) 
+                        method_remap = method_remap ,method_smooth= method_smooth,window=window,polyorder = polyorder) 
         
     return df 
     

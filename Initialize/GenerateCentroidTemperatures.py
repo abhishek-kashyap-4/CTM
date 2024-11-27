@@ -48,14 +48,20 @@ def check_and_merge(df1,df2):
     df['Crop_Type'] = croptype1
     return df 
 
-def generate(start,end,hm,columns_to_copy):
-    dfmax22 = pd.read_csv("Data\\interim\\post\\V5_dfmax22.csv").drop(columns=["Unnamed: 0"])
-    dfmax23 = pd.read_csv("Data\\interim\\post\\V5_dfmax23.csv").drop(columns=["Unnamed: 0"])
-    dfmin22 = pd.read_csv("Data\\interim\\post\\V5_dfmin22.csv").drop(columns=["Unnamed: 0"])
-    dfmin23 = pd.read_csv("Data\\interim\\post\\\V5_dfmin23.csv").drop(columns=["Unnamed: 0"])
+def generate(start,end,hm,columns_to_copy , append = ''):
+    dfmax22 = pd.read_csv("Data\\interim\\post\\V5_dfmax22"+append+".csv").drop(columns=["Unnamed: 0"])
+    dfmax23 = pd.read_csv("Data\\interim\\post\\V5_dfmax23"+append+".csv").drop(columns=["Unnamed: 0"])
+    dfmin22 = pd.read_csv("Data\\interim\\post\\V5_dfmin22"+append+".csv").drop(columns=["Unnamed: 0"])
+    dfmin23 = pd.read_csv("Data\\interim\\post\\\V5_dfmin23"+append+".csv").drop(columns=["Unnamed: 0"])
+    
+    dfmax22 = dfmax22.rename(columns = {'points':'.geo'})
+    dfmax23 = dfmax23.rename(columns = {'points':'.geo'})
+    dfmin22 = dfmin22.rename(columns = {'points':'.geo'})
+    dfmin23 = dfmin23.rename(columns = {'points':'.geo'})
     
     df22 = check_and_merge(dfmax22,dfmin22)
     df23 = check_and_merge(dfmax23,dfmin23)
+    
     df = check_and_merge(df23,df22)
     df['CROP_BASE_TEMP'] = [ crop_base_temp[ct] for ct in df.Crop_Type]
     
@@ -108,10 +114,21 @@ if __name__=='__main__':
     
     start = datetime.date(2022,1,1)
     end = datetime.date(2023,12,30)
-    harmonised2023 = pd.read_csv('Data\\input\\harmonisedv5\\harmonised_v5_2023_csv\\hmv52023.csv')
-    columns_to_copy = ['Unique_Id']
-    temperaturedf = generate(start,end,harmonised2023,columns_to_copy)
-    temperaturedf.to_csv("Data\\interim\\post\\hm_v5_2023_temperatures.csv")
+    
+    
+    annotated = False 
+    if(annotated):
+        harmonised2023 = pd.read_csv('Data\\input\\harmonisedv5\\Annotated_hm.csv')
+        columns_to_copy = ['Unique_Id']
+        temperaturedf = generate(start,end,harmonised2023,columns_to_copy,append ='_annotated')
+        temperaturedf.to_csv("Data\\interim\\post\\hm_v5_2023_temperatures_annotated.csv")
+    else:
+        
+        harmonised2023 = pd.read_csv('Data\\input\\harmonisedv5\\harmonised_v5_2023_csv\\hmv52023.csv')
+        columns_to_copy = ['Unique_Id']
+        temperaturedf = generate(start,end,harmonised2023,columns_to_copy)
+        temperaturedf.to_csv("Data\\interim\\post\\hm_v5_2023_temperatures.csv")
+    
     
     
 

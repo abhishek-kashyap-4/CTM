@@ -2,16 +2,23 @@
 
 
 
+# Targetname - don't hard change data. there's a reason why its in globalvars.
+
 
 ---
+# veredi , annotated , annotatedNDVI
+datakind: 'veredi'
 
-datakind: 'annotatedNDVI'
 # GDD
-GDD: False
+GDD: True
 
-GLOBALNAME_INPUT: 'Point01NDVI'
-GLOBALNAME_OUTPUT: 'Point01NDVI'
+# mangetout1
+GLOBALNAME_INPUT: 'Field02'
+GLOBALNAME_OUTPUT: 'Field02'
 
+SUPPORT:
+    #toggle old and new versions.
+    GDD_Version: 'new' 
 # DEFAULTS
 DEFAULTS:
     
@@ -63,7 +70,7 @@ RUN:
 
 FUNCTIONS: 
     CloudCorrection: 
-        skip: True 
+        skip: False 
         params: 
             feature_pattern: 'CLDPRB'
             method: 'Mask'
@@ -106,7 +113,7 @@ FUNCTIONS:
             start_method: 'sowdate'
             fixed_date: '20230101'
             # You need to add hm , hm_temperatures as arguments from the pipline.
-            increment: 100
+            increment: 40
             
     HarmonisedTimeComposite:
         skip: False
@@ -114,6 +121,8 @@ FUNCTIONS:
             fixed: False 
             fixed_date: '20230101'
             increment: 20
+            agg_by: 'median' 
+            #mean,median
     Preprocess:
         skip: False
         params:
@@ -142,7 +151,7 @@ FUNCTIONS:
         params: 
             by: 'covar'
             correlation_threshold: 0.7
-            cutoff: 15
+            cutoff: 20
             verbose: True
     Models:
         skip: False
@@ -151,7 +160,7 @@ FUNCTIONS:
             models: ['RF']
             tune: True
             cv: False
-        models_avail : ['RF','SVM','XGB'] # This isn't implemented yet.
+        models_avail : ['RF','SVM','XGB','lstm'] 
      
 #####################################################################################
 

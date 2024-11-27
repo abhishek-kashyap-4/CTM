@@ -16,6 +16,9 @@ import numpy as np
 import pandas as pd 
 import GlobalVars 
 
+from utils import utils 
+
+
 #################################################################################################
 def plot_learning_curve(model,X,y):
     
@@ -181,6 +184,117 @@ def get_SVM(df,y,tune=False,cv=False , size = 0.3 , learning_curve = False , ver
 '#########################################################################'
 
 
+from keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense,Input , Concatenate
+from keras.optimizers import Adam
+
+import re 
+
+def reshape_to_3d(X_toshape):
+    '''
+    X is 2d With <samples, time and features>
+    it needs to be <samples, time, features>
+    
+    such that, X[i,:,0] gives the time series of a feature
+    
+    '''  
+    timesteps , columns = utils.get_timesteps_bands(X_toshape , check=True)
+    
+    glob = 0
+    X = np.ndarray(shape=(X_toshape.shape[0],len(timesteps),len(columns)))
+    for co in columns:
+        select = [str(i)+'__'+co for i in timesteps]
+        X[:,:,glob] = X_toshape[select]
+        glob+=1
+    return X 
+    
+def get_LSTM(df,y ):
+    '''
+    df is expected to have 
+        - Time series columns
+        - Aggregated Columns 
+        
+    Feature Selected is expect to be done before this.  
+    '''
+    params = {
+              'epochs': 20 , 
+              'batch_size': 35, 
+              'lr': 0.02 }
+    tcols = []
+    ocols = []
+    for col  in df.columns: 
+        if  re.match(r'[0-9]',col):
+            tcols.append(col)
+        else:
+            ocols.append(col)
+            
+        
+    X_toshape = df[tcols]
+    X_time = reshape_to_3d(X_toshape)
+    
+    X_others = df[ocols]
+    
+    num_classes = len(np.unique(y))
+    # I think it's already happenning
+    
+    #y_categorical = to_categorical(y, num_classes=num_classes)
+    
+    indices = np.arange(len(y))
+    train_indices, test_indices = train_test_split(indices, test_size=0.3)
+    Xtime_train, Xtime_test = X_time[train_indices], X_time[test_indices]
+    Xothers_train, Xothers_test = X_others[train_indices], X_others[test_indices]
+    y_train, y_test = y[train_indices], y[test_indices]
+    
+
+    time_series_input = Input(shape=(Xtime_train.shape[1], Xtime_train.shape[2]))  # e.g., (20, 2) for 20 steps, 2 features
+    lstm_1 = LSTM(64, return_sequences=True)(time_series_input)  # 64 units
+    lstm_output = LSTM(32, return_sequences=False)(lstm_1)
+    
+
+    standalone_input = Input(shape=(Xothers_train.shape[1],))  # e.g., (1,) for MaxNDVI
+    dense_features = Dense(32, activation='relu')(standalone_input)
+    
+    combined = Concatenate()([lstm_output, dense_features])
+    final_output = Dense(num_classes, activation='softmax')(combined)  
+
+    from tensorflow.keras.models import Model
+
+    model = Model(inputs=[time_series_input, standalone_input], outputs=final_output)
+    adam = Adam(learning_rate=params['lr'])
+    
+    model.compile(optimizer=adam, loss='categorical_crossentropy', metrics=['accuracy'])
+        
+    from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+
+    # Early stopping to avoid overfitting
+    early_stopping = EarlyStopping(
+        monitor='val_loss', patience=5, restore_best_weights=True)
+
+    # Reduce learning rate when validation loss plateaus
+    reduce_lr = ReduceLROnPlateau(
+        monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6)
+    
+    history = model.fit([Xtime_train,Xothers_train], y_train,
+                       epochs=params['epochs'], batch_size=params['batch_size'], 
+                       shuffle=True,validation_data=([Xtime_test,Xothers_test], y_test) ,
+                       callbacks = [early_stopping , reduce_lr]) 
+
+    
+    import matplotlib.pyplot as plt
+    
+    # Plot training history
+    plt.plot(history.history['accuracy'], label='Training Accuracy')
+    plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.show()
+    return model , history.history['accuracy'], history
+    
+    
+
+
 
 
 def model_wrapper(df,target,model = 'RF',tune='True',cv=False):
@@ -196,7 +310,8 @@ def model_wrapper(df,target,model = 'RF',tune='True',cv=False):
     elif(model == 'Catboost'):
         pass 
     elif(model == 'lstm'):
-        pass 
+        
+        model , accuracy , report  = get_LSTM(df,target) 
     elif(model == 'cnn'):
         pass 
         

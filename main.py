@@ -123,7 +123,6 @@ def execute(config):
     item = ('CloudCorrection',cl)
     params = config['FUNCTIONS']['CloudCorrection']['params']
     cloudmasked = execute_pipeline_item(item , config , 
-                                        saved_file = GlobalVars.Cloud_file,
                                         input_file = optical.copy(),
                                         params = params,
                                         save_path = 'Data/Interim/Cloud/Optical_Cloudfilled_'+dictionary['GLOBALNAME_OUTPUT']+'.csv')
@@ -134,52 +133,52 @@ def execute(config):
     
     # 2.1 CGDD 
     if(config['GDD']):
+        if(config['SUPPORT']['GDD_Version'] == 'new'):
+            import compositing.GDDComposite_new as gddn 
+            item = ('GDDComposite_new',gddn)
+            params = config['FUNCTIONS']['GDDComposite_new']['params']
+            params['hm_temperatures'] = hm_temperatures
+            params['hm'] = hm
+            save_path = 'Data/Interim/CGDD/Optical_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
+            composited = execute_pipeline_item(item,config,
+                                               saved_file = save_path,
+                                               input_file = optical.copy() , 
+                                               params = params , 
+                                               save_path = save_path ) 
+            
         
-        import compositing.GDDComposite_new as gddn 
-        item = ('GDDComposite_new',gddn)
-        params = config['FUNCTIONS']['GDDComposite_new']['params']
-        params['hm_temperatures'] = hm_temperatures
-        params['hm'] = hm
-        save_path = 'Data/Interim/CGDD/Optical_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
-        composited = execute_pipeline_item(item,config,
-                                           saved_file = save_path,
-                                           input_file = optical.copy() , 
-                                           params = params , 
-                                           save_path = save_path ) 
-        
-        
-        '''
-        import compositing.GenerateCentroidTemperaturesCGDD as gcc 
-        item  = ('GenerateCentroidTemperaturesCGDD' , gcc)
-        params =  config['FUNCTIONS']['GenerateCentroidTemperaturesCGDD']['params']
-        centroids  = pd.read_csv('Data/Interim/post/temperature_V5_2023_centroids.csv')
-        if(params['method'] == 'fixed'):
-            save_path = 'Data/Interim/Post/centroid_temperatures_cgdd_v5_fixed_'+str(params['startdate'])+'_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
-        else:
-            save_path = 'Data/Interim/Post/centroid_temperatures_cgdd_v5_dynamic_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
-        cgdd = execute_pipeline_item(item , config , 
-                                            input_file = centroids.copy(),
-                                            params = params,
-                                            save_path = save_path)
-                    #####               #######             ######
-        
-        
-        import compositing.HarmonisedGDDComposite as HGC 
-        item = ('HarmonisedGDDComposite',HGC)
-        params = config['FUNCTIONS']['HarmonisedGDDComposite']['params']
-        params['hm'] = hm.copy()
-        params['cgdd'] = cgdd.copy()
-        params['bands'] = GlobalVars.optical_bands
-        save_path = 'Data/Interim/CGDD/cgdd_'+dictionary['GLOBALNAME_OUTPUT']+'.csv'
-        composited = execute_pipeline_item(item , config , 
-                                            input_file = optical.copy(),
-                                            params = params,
-                                            save_path = save_path)
-        
-        
+        elif(config['SUPPORT']['GDD_Version'] == 'old'):
+            import compositing.GenerateCentroidTemperaturesCGDD as gcc 
+            item  = ('GenerateCentroidTemperaturesCGDD' , gcc)
+            params =  config['FUNCTIONS']['GenerateCentroidTemperaturesCGDD']['params']
+            centroids  = pd.read_csv('Data/Interim/post/temperature_V5_2023_centroids.csv')
+            if(params['method'] == 'fixed'):
+                save_path = 'Data/Interim/Post/centroid_temperatures_cgdd_v5_fixed_'+str(params['startdate'])+'_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
+            else:
+                save_path = 'Data/Interim/Post/centroid_temperatures_cgdd_v5_dynamic_'+dictionary['GLOBALNAME_OUTPUT']+'.csv' 
+            cgdd = execute_pipeline_item(item , config , 
+                                                input_file = centroids.copy(),
+                                                params = params,
+                                                save_path = save_path)
+                        #####               #######             ######
+            
+            
+            import compositing.HarmonisedGDDComposite as HGC 
+            item = ('HarmonisedGDDComposite',HGC)
+            params = config['FUNCTIONS']['HarmonisedGDDComposite']['params']
+            params['hm'] = hm.copy()
+            params['cgdd'] = cgdd.copy()
+            params['bands'] = GlobalVars.optical_bands
+            save_path = 'Data/Interim/CGDD/cgdd_'+dictionary['GLOBALNAME_OUTPUT']+'.csv'
+            composited = execute_pipeline_item(item , config , 
+                                                input_file = optical.copy(),
+                                                params = params,
+                                                save_path = save_path)
+            
+            
         
         utils.check_column_syntax(composited , kind = 'timestep',stricter = True)
-        '''
+        
         
     # 2.2 Harmonised Time Composite
     elif(not config['GDD']):
@@ -216,8 +215,12 @@ def execute(config):
     import preprocessing.Preprocess as pp 
     item = ('Preprocess',pp)
     params = config['FUNCTIONS']['Preprocess']['params'] 
+    
     if(config['datakind'] in ['annotated']):
         params['mapper'] = GlobalVars.target_remap_annotated
+        composited['Sow_Date'] = np.nan
+        
+        
     preprocessed = execute_pipeline_item(item,config,
                                          input_file = composited.copy() ,
                                          params = params ,
@@ -239,9 +242,8 @@ def execute(config):
     
     import EDA.EDA_Functions as eda 
     eda.band_series_by_croptype(feature_added,'NDVI',method='median')
-    eda.plot_mean_std(feature_added , bands = ['NDVI'],croptypes = ['Summer_cro'])
-    
-    15/0
+    eda.plot_mean_std(feature_added , bands = ['NDVI'],croptypes = ['Wheat'])
+    456/0
 
     
     ### 3.3 Feature selection 
@@ -252,7 +254,7 @@ def execute(config):
     
     # A_K_ this is error prone. Come back to this.
     print("WARNING - removing hm features manually for feature selection. (and not adding back). This is error-prone,change it.")
-    cols = ['Unique_Id']
+    cols = ['Unique_Id','Sow_Date']
     feature_added = feature_added.drop(columns = cols) 
     
     # Mapping original target values to numerical labels
@@ -262,11 +264,12 @@ def execute(config):
     params['target'] = target_numeric 
     
     feature_added = feature_added.drop(columns = [GlobalVars.target])
+    
     feature_selected = execute_pipeline_item(item,config,
                                          input_file = feature_added.copy() ,
                                          params = params ,
                                          save_path ='Data/Interim/Added/Optical_Cloudfilled_preprocessed_added_selected_'+dictionary['GLOBALNAME_OUTPUT']+'.csv')
-
+    
     ### 4 ML
     import ML.models as mm 
     item = ('Models',mm)
@@ -300,9 +303,8 @@ def execute_01(config)  :
     optical = utils.add_hm_features(optical,hm,features = ['Crop_Type','Sow_Date'])
     optical = optical[optical.Crop_Type == crop] 
     
-    print(optical)
-    optical = optical.sample(n=1)
-    
+    optical = optical.sample(n=10)
+    optical.reset_index(inplace=True , drop=True)
     
     # 1. Cloud Masking/Filling
     import preprocessing.Cloudfill as cl
@@ -313,9 +315,7 @@ def execute_01(config)  :
                                         params = params,
                                         )
     
-    
-    
-    
+      
     import compositing.GDDComposite_new as gddn 
     item = ('GDDComposite_new',gddn)
     params = config['FUNCTIONS']['GDDComposite_new']['params']
@@ -337,10 +337,12 @@ def execute_01(config)  :
                                        input_file = optical.copy(),
                                        params = params ,) 
     
+    params['increment'] =1
+    orig = execute_pipeline_item(item, config,
+                                       input_file = optical.copy(),
+                                       params = params ,) 
     
     
-    
-        
     def do(composited):
         # Compositing postprocess.    
         composited = utils.add_hm_features(composited,hm,features = ['Crop_Type','Sow_Date'])
@@ -373,8 +375,8 @@ def execute_01(config)  :
     
     
     
-    feature_added = do(optical)
-    print(feature_added)
+    feature_added = do(orig)
+    print(feature_added.t_max_NDVI.var())
     import EDA.EDA_Functions as eda 
     eda.band_series_by_croptype(feature_added,'NDVI',method='median')
     eda.plot_mean_std(feature_added , bands = ['NDVI'],croptypes = ['Wheat'])    
@@ -389,14 +391,9 @@ def execute_01(config)  :
     eda.band_series_by_croptype(feature_added,'NDVI',method='median')
     eda.plot_mean_std(feature_added , bands = ['NDVI'],croptypes = ['Wheat'])    
      
-   
-     
 
-        
-        
-        
 
-    
+
 def get_base_config_dictionary(fname):
     with open(fname) as stream:
         try:
@@ -425,23 +422,15 @@ def prerequisites(config , gdd=True):
     hm =  pd.read_csv(GlobalVars.harmonised_file)
     optical = pd.read_csv(GlobalVars.optical_file)
     if(config['datakind'] in ['annotated']):
-        
         hm = hm.rename(columns={'Class_st':'Crop_Type'})
-        
     if(gdd):
         hm_temperatures = pd.read_csv(GlobalVars.hm_temperatures_file)
         return hm,optical, hm_temperatures
     return hm,optical
     
-    
-    
 
-
-    
-    
-    
-    
 if __name__ == '__main__':
+    
     dictionary = ConfigWrapper('config/config.yaml')
     execute(dictionary)
     

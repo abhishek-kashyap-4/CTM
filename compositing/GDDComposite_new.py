@@ -135,7 +135,7 @@ def CGDD(df,hm_temperatures , hm ,start_method = 'sowdate', fixed_date = '202301
                 aggregated_sublists[i].append(date)
         
         # Aggregate all bands based on aggregated sublists
-        
+        # Use key-1 since i=0 isn't being used. 
         ################################################################################33333
         aggregated_df = {}
         aggregated_df['Unique_Id'] = uid 
@@ -143,7 +143,7 @@ def CGDD(df,hm_temperatures , hm ,start_method = 'sowdate', fixed_date = '202301
         for key in aggregated_sublists:
             dates = aggregated_sublists[key]
             for band in satellite_bands:
-                aggregated_df[str(key)+'__'+band] = row[[date+'__'+band for date in dates]].mean() 
+                aggregated_df[str(key-1)+'__'+band] = row[[date+'__'+band for date in dates]].mean() 
         
         newrows.append(aggregated_df)
     

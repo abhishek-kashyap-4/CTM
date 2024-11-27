@@ -12,6 +12,8 @@ Input:
     
     1. AgERA5 temperature files. 
         This is the only script that accesses these files. 
+        _> thank you for this comment, AK. It helps.
+        
     2. Harmonised geometries 
         Read if execution is in here, get as argument if its from pipeline
         (Pipline would probably call it multiple times for multiple years)
@@ -32,9 +34,11 @@ import os
 import re 
 import pandas as pd
 import numpy as np
+import warnings 
 
+warnings.warn('utils.extract_centroid , get_vals_for_points are using lat,long instead of long lat. \n This is not an error but  its not a good idea as geometry generally is lon, lat.')
 
-from Generics import extract_centroid 
+from utils.utils import extract_centroid 
 
 def get_vals_for_points(points,path,append):
     '''
@@ -57,11 +61,16 @@ def get_vals_for_points(points,path,append):
         
 
 
-def gather(agera_directory,hm,year=2023):
+def gather(agera_directory,hm,year=2023, kind = 'default'):
     '''
     Directory should have subdirectory 'Temperature' 
     '''
-    hm['points'] = hm['.geo'].apply(extract_centroid)
+    
+    if(kind == 'annotated'):
+        hm['points'] = list(zip(hm['lat'] ,hm['lon']))
+        
+    else: 
+        hm['points'] = hm['.geo'].apply(extract_centroid)
     ## the 4 paths are max, min of year,year-1 
     
     print("0%")
@@ -69,8 +78,13 @@ def gather(agera_directory,hm,year=2023):
     path = agera_directory + '24 max '+str(year-1)
     dfmax22 = get_vals_for_points(hm['points'],path,'MAX')
     dfmax22 = pd.DataFrame(dfmax22)
-    dfmax22['.geo'] = hm['.geo']
-    dfmax22['Crop_Type'] = hm['Crop_Type']
+    if(kind == 'annotated'):
+        dfmax22['points'] = hm['points'] 
+        dfmax22['Crop_Type'] = hm['Class_st']
+    else:
+        dfmax22['.geo'] = hm['.geo']
+        dfmax22['Crop_Type'] = hm['Crop_Type']
+    
     yield dfmax22 
     del dfmax22
     
@@ -79,8 +93,14 @@ def gather(agera_directory,hm,year=2023):
     path = agera_directory + '24 min '+str(year-1)
     dfmin22 = get_vals_for_points(hm['points'],path,'MIN')
     dfmin22 = pd.DataFrame(dfmin22)
-    dfmin22['.geo'] = hm['.geo']
-    dfmin22['Crop_Type'] = hm['Crop_Type']
+    if(kind == 'annotated'):
+        dfmin22['points'] = hm['points'] 
+        dfmin22['Crop_Type'] = hm['Class_st']
+    else:
+        dfmin22['.geo'] = hm['.geo']
+        dfmin22['Crop_Type'] = hm['Crop_Type']
+        
+    dfmin22['Crop_Type'] = hm['Class_st']
     yield dfmin22 
     del dfmin22
 
@@ -88,8 +108,14 @@ def gather(agera_directory,hm,year=2023):
     path = agera_directory + '24 max '+str(year)
     dfmax23 = get_vals_for_points(hm['points'],path,'MAX')
     dfmax23 = pd.DataFrame(dfmax23)
-    dfmax23['.geo'] = hm['.geo']
-    dfmax23['Crop_Type'] = hm['Crop_Type']
+    if(kind == 'annotated'):
+        dfmax23['points'] = hm['points'] 
+        dfmax23['Crop_Type'] = hm['Class_st']
+    else:
+        dfmax23['.geo'] = hm['.geo']
+        dfmax23['Crop_Type'] = hm['Crop_Type']
+        
+    dfmax23['Crop_Type'] = hm['Class_st']
     yield dfmax23 
     del dfmax23 
 
@@ -97,8 +123,14 @@ def gather(agera_directory,hm,year=2023):
     path = agera_directory + '24 min '+str(year)
     dfmin23 = get_vals_for_points(hm['points'],path,'MIN')
     dfmin23 = pd.DataFrame(dfmin23)
-    dfmin23['.geo'] = hm['.geo']
-    dfmin23['Crop_Type'] = hm['Crop_Type']
+    if(kind == 'annotated'):
+        dfmin23['points'] = hm['points'] 
+        dfmin23['Crop_Type'] = hm['Class_st']
+    else:
+        dfmin23['.geo'] = hm['.geo']
+        dfmin22['Crop_Type'] = hm['Crop_Type']
+        
+    dfmin23['Crop_Type'] = hm['Class_st']
     yield dfmin23 
     del dfmin23
     
@@ -109,10 +141,10 @@ def gather(agera_directory,hm,year=2023):
 
 if __name__ == '__main__':
     
-    hm =  pd.read_csv('Data/input/harmonisedv5/harmonised_v5_2023_csv/hmv52023.csv')
+    hm =  pd.read_csv('Data/input/harmonisedv5/Annotated_hm.csv')
     
     agera_directory = 'Data/input/Temperature/'
-    dfmax22 , dfmin22, dfmax23 , dfmin23 = gather(agera_directory,hm,year=2023)
+    dfmax22 , dfmin22, dfmax23 , dfmin23 = gather(agera_directory,hm,year=2023,kind = 'annotated')
     
     dfmax22.to_csv('Data/interim/post/V5_dfmax22.csv')
     dfmin22.to_csv('Data/interim/post/V5_dfmin22.csv')

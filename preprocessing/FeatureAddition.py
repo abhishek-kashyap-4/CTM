@@ -28,7 +28,7 @@ def feature_addition(df, time_indexes = [], comb=True , tim = False , STN = Fals
     '''
       
     indices = []
-    timesteps,indices = get_timesteps_bands(df,check=True)
+    timesteps,indices = get_timesteps_bands(df,reg = '[0-9]+__',check=True)
 
     dfd = {}
     
@@ -43,11 +43,11 @@ def feature_addition(df, time_indexes = [], comb=True , tim = False , STN = Fals
           dfd[str(time)+'__NDRE'] = (df[str(time)+'__B7'] - df[str(time)+'__B5']) / (df[str(time)+'__B7'] + df[str(time)+'__B5'])
           dfd[str(time)+'__NDWI'] =  (df[str(time)+'__B3'] - df[str(time)+'__B8']) / (df[str(time)+'__B3'] + df[str(time)+'__B8'])
           dfd[str(time)+'__NDYI'] = (df[str(time)+'__B3'] - df[str(time)+'__B2'])/(df[str(time)+'__B3'] + df[str(time)+'__B2'])
-      
           #df[str(time)+ '_LAI'] = (1 / (-0.35)) * np.log((0.69 - df[str(time)+'_B4']) / (0.69 + df[str(time)+'_B4']))
           # LAI creating null values
         #Be careful, this needs to be manually updated when you add a new index above.
         df = pd.concat([df,pd.DataFrame(dfd)],axis=1)
+        
         indices += ['NDVI','SAVI','NDRE','NDWI','NDYI'] 
     ########### 2. Time Aggregated Indexes.
     if(tim):
@@ -190,7 +190,6 @@ def additional(df):
     
 def pipeline_executable(first_arg , time_indexes = 'all', comb=True , tim = False , STN = False, tim_method = 'Full', STN_w = 3):
     df = first_arg
-    
     assert sum(1 for col in df.columns if '__' in col) >1 , "Follow the convention of <Date/timestep>__<band> (Double Underscore)"
     addeddf = feature_addition(df,time_indexes = time_indexes,comb=comb,tim=tim,STN=STN , tim_method = tim_method,STN_w=STN_w)
     return addeddf

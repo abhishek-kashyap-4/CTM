@@ -11,7 +11,7 @@ from datetime import datetime,timedelta
 
 
 
-def aggregation(all_df , fromdate,increment,globalcounter,existing_dates,bands):
+def aggregation(all_df , fromdate,increment,globalcounter,existing_dates,bands , agg_by = 'mean'):
     fromdate_obj = datetime.strptime(fromdate,'%Y%m%d')
     dates = [fromdate]
     newdata = {}
@@ -23,11 +23,16 @@ def aggregation(all_df , fromdate,increment,globalcounter,existing_dates,bands):
     
     for band in bands:
         columns = [date+'__'+ band for date in dates]
-        newdata[str(globalcounter)+'__'+band] =  all_df[columns].mean(axis=1)
+        if(agg_by == 'mean'):
+            newdata[str(globalcounter)+'__'+band] =  all_df[columns].mean(axis=1)
+        elif(agg_by == 'median'):
+            newdata[str(globalcounter)+'__'+band] =  all_df[columns].median(axis=1)
+        else:
+            raise Exception("Method not found.")
     return newdata
  
 
-def pipeline_executable(first_arg ,bands,fixed = False , fixed_date = '20230101',increment = 10):
+def pipeline_executable(first_arg ,bands,fixed = False , fixed_date = '20230101',increment = 10 , agg_by = 'mean'):
 
 
     all_df = first_arg

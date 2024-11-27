@@ -223,6 +223,49 @@ def get_col_variances(data,threshold=0):
 ####  Time series with mean, variance (or) median , variance. 
 #### Box plot of a band (A band's signature)
     
+import matplotlib.cm as cm
+
+
+def plot_all_signals(df , band = 'NDVI',category = 'Crop_Type',append='',show=True):
+    '''
+    THis is taking croptypes. filter before if ya want. 
+    '''
+    
+    assert type(band) == str , "Only give one band, as str."
+    
+    
+    
+    
+    categories = df[category]
+    unique_categories = categories.unique()
+    colors = cm.tab10(np.linspace(0, 1, len(unique_categories)))  
+    category_color_map = dict(zip(unique_categories, colors)) 
+    
+    dfb = df[[col for col in df.columns if(band in col and re.match(r'[0-9]+__',col))]]
+    dfb = dfb.T
+    
+    plt.figure(6554)
+    sns.set(style="darkgrid")
+    for i, category in enumerate(categories):
+        plt.plot(
+            dfb.index, 
+            dfb.iloc[:, i], 
+            color=category_color_map[category], 
+            alpha=0.7,  # Transparency
+            linewidth=0.8,  # Thin line width
+            label=category if i == categories.tolist().index(category) else ""  # One label per category
+        )
+        
+    #for i in range(dfb.shape[1]):
+     #   plt.plot(dfb.index, dfb.iloc[:, i],alpha=0.3, linewidth=0.8 )
+
+    if(show):
+        plt.xlabel('Time / GDD axis. ')
+        plt.ylabel(f'Band - {band}')
+        plt.title('All band series')
+        plt.legend(title='Category', loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0.)
+        plt.show()
+    
 def plot_mean_std(df,bands = ['NDVI'],croptypes = [],method='mean',show=True,std=True,append='',xl='Time / GDD',tle='Mean and std for band'):
     '''
     Multiple Timesteps, Single band, Multiple points. 

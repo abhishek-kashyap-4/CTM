@@ -4,7 +4,7 @@ Created on Tue Aug 20 18:04:06 2024
 
 @author: kashy
 """
-which = 'annotatedNDVI'
+which = 'veredi'
 year = '2023'
 
 
@@ -18,14 +18,16 @@ if(which == 'veredi'):
     hm_temperatures_file = 'Data\\Interim\\post\\hm_v5_2023_temperatures.csv'
 
     Cloud_file = 'Data/interim/Cloud/Optical_Cloudfilled.csv'
+    
 elif(which == 'annotated'):
     harmonised_file = 'Data/input/harmonisedv5/Annotated_hm.csv'
     optical_file = 'Data/input/Satellite/Point_Optical.csv'
-    Cloud_file = ''
+    hm_temperatures_file = 'Data\\Interim\\post\\hm_v5_2023_temperatures_annotated.csv'
 elif(which == 'annotatedNDVI'):
     harmonised_file = 'Data/input/harmonisedv5/Annotated_hm_NDVI.csv'
     optical_file = 'Data/input/Satellite/Point_OpticalNDVI.csv'
     Cloud_file = ''
+
 
 target = 'Crop_Type'
 
@@ -39,14 +41,23 @@ target_remap = {'Abandoned': 'Others','Fallow':'Others' , 'Grassland':'Others',
                 'Spring_Wheat':'Wheat','Sugar_Beet':'Sugar_Beet','Sunflower':'Sunflower',
                 'Wheat':'Wheat','Winter_Barley':'Wheat','Winter_Rapeseed':'Rapeseed','Winter_Rye':'Wheat',
                 'Winter_Wheat':'Wheat'}
+                
+target_remap_annotated = {'Fallow':'Fallow', 'Non_crop':'Non_crop', 'Rapeseed':'Rapeseed', 'Summer_cro':'Summer_cro', 'Winter_cer':'Winter_cer'}
 
-crop_base_temp = {'Abandoned': 0, 'Fallow': 0, 'Grassland': 0, 
+if(which == 'veredi'):
+    crop_base_temp = {'Abandoned': 0, 'Fallow': 0, 'Grassland': 0, 
                   'Maize': 10, 'Maize_Silage': 0, 'Mined': 0, 
                   'Oats': 0, 'Rapeseed': 5,'Soybean': 10, 
                   'Spring_Wheat': 4, 'Sugar_Beet': 3.5, 'Sunflower': 7, 
                   'Wheat': 0, 'Winter_Barley': 0,
                   'Winter_Rapeseed': 0, 'Winter_Rye': 0,
                   'Winter_Wheat': 0}
+elif(which == 'annotated'):
+    crop_base_temp = {'Fallow':0, 'Non_crop':0, 'Rapeseed':5,
+                         'Summer_cro':10, 'Winter_cer':0}
+    
+crop_list = crop_base_temp.keys()
+
 
 # Let it be for code compatibility
 crop_avg_sow_date = {'Abandoned': -1, 'Fallow': -1, 'Grassland': '2023-03-27', 
@@ -58,6 +69,4 @@ crop_avg_sow_date = {'Abandoned': -1, 'Fallow': -1, 'Grassland': '2023-03-27',
                      'Winter_Rapeseed': '2022-08-20', 'Winter_Rye': '2022-10-25',
                      'Winter_Wheat': '2022-10-03'}
                      
-crop_list = crop_base_temp.keys()
 
-target_remap_annotated = {'Fallow':'Fallow', 'Non_crop':'Non_crop', 'Rapeseed':'Rapeseed', 'Summer_cro':'Summer_cro', 'Winter_cer':'Winter_cer'}
